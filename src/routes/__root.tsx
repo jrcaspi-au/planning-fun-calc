@@ -82,6 +82,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Lovable App" },
       { name: "twitter:description", content: "Funnel Calculator" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/de7a186a-e465-4e16-af84-a85b587a9593/id-preview-6593e3a5--1aa3ec21-1674-4d4d-9a34-89c27fb84038.lovable.app-1780343383123.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/de7a186a-e465-4e16-af84-a85b587a9593/id-preview-6593e3a5--1aa3ec21-1674-4d4d-9a34-89c27fb84038.lovable.app-1780343383123.png" },
     ],
     links: [
       {
