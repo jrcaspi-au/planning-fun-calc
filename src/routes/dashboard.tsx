@@ -63,23 +63,20 @@ const DEVICES = ["Desktop", "Mobile", "Tablet"] as const;
 type LiftStep =
   | "ProductViewed"
   | "ProjectStarted"
-  | "ImageAdded"
   | "ProductAdded"
   | "OrderCompleted";
 
 const LIFT_STEPS: { value: LiftStep; label: string; rateLabel: string }[] = [
   { value: "ProductViewed", label: "Product Viewed", rateLabel: "" },
   { value: "ProjectStarted", label: "Project Started", rateLabel: "PSR" },
-  { value: "ImageAdded", label: "Image Added", rateLabel: "Image Add Rate" },
   { value: "ProductAdded", label: "Product Added", rateLabel: "Add to Cart Rate" },
   { value: "OrderCompleted", label: "Order Completed", rateLabel: "Checkout Rate" },
 ];
 
-type RateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+type RateKey = "psr" | "addToCartRate" | "checkoutRate";
 
 type Rates = {
   psr: number;
-  imageAddRate: number;
   addToCartRate: number;
   checkoutRate: number;
 };
@@ -89,10 +86,8 @@ type Rates = {
 function downstreamRateKeys(s: LiftStep): RateKey[] {
   switch (s) {
     case "ProductViewed":
-      return ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
+      return ["psr", "addToCartRate", "checkoutRate"];
     case "ProjectStarted":
-      return ["imageAddRate", "addToCartRate", "checkoutRate"];
-    case "ImageAdded":
       return ["addToCartRate", "checkoutRate"];
     case "ProductAdded":
       return ["checkoutRate"];
@@ -103,7 +98,6 @@ function downstreamRateKeys(s: LiftStep): RateKey[] {
 
 const RATE_LABEL: Record<RateKey, string> = {
   psr: "PSR",
-  imageAddRate: "Image Add Rate",
   addToCartRate: "Add to Cart Rate",
   checkoutRate: "Checkout Rate",
 };
