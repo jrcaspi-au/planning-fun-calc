@@ -576,7 +576,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b px-8 py-4">
-        <h1 className="font-serif text-xl font-medium tracking-tight">Funnel Calculator</h1>
+        <h1 className="font-serif text-xl font-medium tracking-tight"><span className="underline underline-offset-4 decoration-1">Planning</span> Funnel Calculator</h1>
         <Button
           variant="outline"
           size="sm"
