@@ -1225,7 +1225,7 @@ function ValuePair({
 
 // ----------------------------- Segment Funnel -----------------------------
 
-type SegRateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+type SegRateKey = "psr" | "addToCartRate" | "checkoutRate";
 type SegOverrides = Partial<Record<SegRateKey, string>>;
 
 function SegmentFunnel({
