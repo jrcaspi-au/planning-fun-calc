@@ -652,12 +652,6 @@ function Dashboard() {
             </div>
           </div>
 
-          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-            7-day attribution window applied. Orders are counted only if
-            completed within 7 days of project start, which excludes
-            longer-tail purchases (multi-week deliberation cycles).
-          </p>
-
           <div className="mt-8 border-t pt-6">
             <h2 className="text-xs font-semibold tracking-widest text-muted-foreground">
               DATA MANAGEMENT
