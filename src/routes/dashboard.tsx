@@ -105,7 +105,6 @@ const RATE_LABEL: Record<RateKey, string> = {
 type ChainState = {
   product_viewed: number;
   project_started: number;
-  image_added: number;
   product_added: number;
   order_completed: number;
   revenue: number;
@@ -125,7 +124,6 @@ function computeChain(
   if (liftStep && liftMult !== 1) {
     if (liftStep === "ProductViewed") product_viewed *= liftMult;
     else if (liftStep === "ProjectStarted") r.psr *= liftMult;
-    else if (liftStep === "ImageAdded") r.imageAddRate *= liftMult;
     else if (liftStep === "ProductAdded") r.addToCartRate *= liftMult;
     else if (liftStep === "OrderCompleted") r.checkoutRate *= liftMult;
   }
@@ -138,14 +136,12 @@ function computeChain(
     }
   }
   const project_started = product_viewed * r.psr;
-  const image_added = project_started * r.imageAddRate;
-  const product_added = image_added * r.addToCartRate;
+  const product_added = project_started * r.addToCartRate;
   const order_completed = product_added * r.checkoutRate;
   const revenue = order_completed * aov;
   return {
     product_viewed,
     project_started,
-    image_added,
     product_added,
     order_completed,
     revenue,
@@ -156,8 +152,7 @@ function computeChain(
 function ratesFromBaseline(b: Baseline): Rates {
   return {
     psr: safeDiv(b.projectStarted, b.pdpSessions),
-    imageAddRate: safeDiv(b.imageAdded, b.projectStarted),
-    addToCartRate: safeDiv(b.addedToCart, b.imageAdded),
+    addToCartRate: safeDiv(b.addedToCart, b.projectStarted),
     checkoutRate: safeDiv(b.orders, b.addedToCart),
   };
 }
@@ -165,8 +160,7 @@ function ratesFromBaseline(b: Baseline): Rates {
 function blendedRatesFromChain(c: ChainState): Rates {
   return {
     psr: safeDiv(c.project_started, c.product_viewed),
-    imageAddRate: safeDiv(c.image_added, c.project_started),
-    addToCartRate: safeDiv(c.product_added, c.image_added),
+    addToCartRate: safeDiv(c.product_added, c.project_started),
     checkoutRate: safeDiv(c.order_completed, c.product_added),
   };
 }
@@ -176,14 +170,12 @@ function blendedRatesFromChain(c: ChainState): Rates {
 const STEP_LABEL: Record<LiftStep, string> = {
   ProductViewed: "Product Viewed",
   ProjectStarted: "Project Started",
-  ImageAdded: "Image Added",
   ProductAdded: "Product Added",
   OrderCompleted: "Order Completed",
 };
 
 const RATE_PLAIN: Record<RateKey, string> = {
   psr: "project start rate",
-  imageAddRate: "image add rate",
   addToCartRate: "add-to-cart rate",
   checkoutRate: "order conversion",
 };
