@@ -531,7 +531,6 @@ function Dashboard() {
       ["Test lift %", `${liftPctNum}%`, ""],
       ["Product Viewed", fmt(aggregateBaselineChain.product_viewed), fmt(aggregateLiftedChain.product_viewed)],
       ["Project Started", fmt(aggregateBaselineChain.project_started), fmt(aggregateLiftedChain.project_started)],
-      ["Image Added", fmt(aggregateBaselineChain.image_added), fmt(aggregateLiftedChain.image_added)],
       ["Product Added", fmt(aggregateBaselineChain.product_added), fmt(aggregateLiftedChain.product_added)],
       ["Order Completed", fmt(aggregateBaselineChain.order_completed), fmt(aggregateLiftedChain.order_completed)],
       ["AOV", fmt(baseline.aov, true), fmt(baseline.aov, true)],
