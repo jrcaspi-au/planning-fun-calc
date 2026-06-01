@@ -311,7 +311,7 @@ function Dashboard() {
 
   // Per-segment baseline rate overrides keyed by "device|productLine".
   // Resets each session so baseline always shows on load.
-  type RateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+  type RateKey = "psr" | "addToCartRate" | "checkoutRate";
   type SegmentOverrides = Partial<Record<RateKey, string>>;
   const [segmentRates, setSegmentRates] = useState<Record<string, SegmentOverrides>>({});
 
