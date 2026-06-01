@@ -968,16 +968,6 @@ function ChainView({
           liftActive={liftActive}
         />
         <ChainArrow />
-        {renderRateRow("imageAddRate", "Image Add Rate", affectedStep === "ImageAdded")}
-        <ChainArrow />
-        <ChainNodeRow
-          label="Image Added"
-          baseline={baselineChain.image_added}
-          lifted={liftedChain.image_added}
-          isAffected={affectedStep === "ImageAdded"}
-          liftActive={liftActive}
-        />
-        <ChainArrow />
         {renderRateRow("addToCartRate", "Add to Cart Rate", affectedStep === "ProductAdded")}
         <ChainArrow />
         <ChainNodeRow
