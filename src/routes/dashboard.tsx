@@ -182,12 +182,14 @@ function blendedRatesFromChain(c: ChainState): Rates {
 const STEP_LABEL: Record<LiftStep, string> = {
   ProductViewed: "Product Viewed",
   ProjectStarted: "Project Started",
+  ImageAdded: "Image Added",
   ProductAdded: "Product Added",
   OrderCompleted: "Order Completed",
 };
 
 const RATE_PLAIN: Record<RateKey, string> = {
   psr: "project start rate",
+  imageAddRate: "image-add rate",
   addToCartRate: "add-to-cart rate",
   checkoutRate: "order conversion",
 };
