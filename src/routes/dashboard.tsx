@@ -1284,6 +1284,7 @@ function SegmentFunnel({
 
   const effectiveRates: Rates = {
     psr: rateOf("psr"),
+    imageAddRate: rateOf("imageAddRate"),
     addToCartRate: rateOf("addToCartRate"),
     checkoutRate: rateOf("checkoutRate"),
   };
