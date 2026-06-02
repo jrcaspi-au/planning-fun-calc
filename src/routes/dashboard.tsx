@@ -63,20 +63,23 @@ const DEVICES = ["Desktop", "Mobile", "Tablet"] as const;
 type LiftStep =
   | "ProductViewed"
   | "ProjectStarted"
+  | "ImageAdded"
   | "ProductAdded"
   | "OrderCompleted";
 
 const LIFT_STEPS: { value: LiftStep; label: string; rateLabel: string }[] = [
   { value: "ProductViewed", label: "Product Viewed", rateLabel: "" },
   { value: "ProjectStarted", label: "Project Started", rateLabel: "PSR" },
+  { value: "ImageAdded", label: "Image Added", rateLabel: "Image Add Rate" },
   { value: "ProductAdded", label: "Product Added", rateLabel: "Add to Cart Rate" },
   { value: "OrderCompleted", label: "Order Completed", rateLabel: "Checkout Rate" },
 ];
 
-type RateKey = "psr" | "addToCartRate" | "checkoutRate";
+type RateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
 
 type Rates = {
   psr: number;
+  imageAddRate: number;
   addToCartRate: number;
   checkoutRate: number;
 };
@@ -86,8 +89,10 @@ type Rates = {
 function downstreamRateKeys(s: LiftStep): RateKey[] {
   switch (s) {
     case "ProductViewed":
-      return ["psr", "addToCartRate", "checkoutRate"];
+      return ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
     case "ProjectStarted":
+      return ["imageAddRate", "addToCartRate", "checkoutRate"];
+    case "ImageAdded":
       return ["addToCartRate", "checkoutRate"];
     case "ProductAdded":
       return ["checkoutRate"];
@@ -98,6 +103,7 @@ function downstreamRateKeys(s: LiftStep): RateKey[] {
 
 const RATE_LABEL: Record<RateKey, string> = {
   psr: "PSR",
+  imageAddRate: "Image Add Rate",
   addToCartRate: "Add to Cart Rate",
   checkoutRate: "Checkout Rate",
 };
@@ -105,6 +111,7 @@ const RATE_LABEL: Record<RateKey, string> = {
 type ChainState = {
   product_viewed: number;
   project_started: number;
+  image_added: number;
   product_added: number;
   order_completed: number;
   revenue: number;
@@ -124,6 +131,7 @@ function computeChain(
   if (liftStep && liftMult !== 1) {
     if (liftStep === "ProductViewed") product_viewed *= liftMult;
     else if (liftStep === "ProjectStarted") r.psr *= liftMult;
+    else if (liftStep === "ImageAdded") r.imageAddRate *= liftMult;
     else if (liftStep === "ProductAdded") r.addToCartRate *= liftMult;
     else if (liftStep === "OrderCompleted") r.checkoutRate *= liftMult;
   }
@@ -136,12 +144,14 @@ function computeChain(
     }
   }
   const project_started = product_viewed * r.psr;
-  const product_added = project_started * r.addToCartRate;
+  const image_added = project_started * r.imageAddRate;
+  const product_added = image_added * r.addToCartRate;
   const order_completed = product_added * r.checkoutRate;
   const revenue = order_completed * aov;
   return {
     product_viewed,
     project_started,
+    image_added,
     product_added,
     order_completed,
     revenue,
@@ -152,7 +162,8 @@ function computeChain(
 function ratesFromBaseline(b: Baseline): Rates {
   return {
     psr: safeDiv(b.projectStarted, b.pdpSessions),
-    addToCartRate: safeDiv(b.addedToCart, b.projectStarted),
+    imageAddRate: safeDiv(b.imageAdded, b.projectStarted),
+    addToCartRate: safeDiv(b.addedToCart, b.imageAdded),
     checkoutRate: safeDiv(b.orders, b.addedToCart),
   };
 }
@@ -160,7 +171,8 @@ function ratesFromBaseline(b: Baseline): Rates {
 function blendedRatesFromChain(c: ChainState): Rates {
   return {
     psr: safeDiv(c.project_started, c.product_viewed),
-    addToCartRate: safeDiv(c.product_added, c.project_started),
+    imageAddRate: safeDiv(c.image_added, c.project_started),
+    addToCartRate: safeDiv(c.product_added, c.image_added),
     checkoutRate: safeDiv(c.order_completed, c.product_added),
   };
 }
@@ -170,12 +182,14 @@ function blendedRatesFromChain(c: ChainState): Rates {
 const STEP_LABEL: Record<LiftStep, string> = {
   ProductViewed: "Product Viewed",
   ProjectStarted: "Project Started",
+  ImageAdded: "Image Added",
   ProductAdded: "Product Added",
   OrderCompleted: "Order Completed",
 };
 
 const RATE_PLAIN: Record<RateKey, string> = {
   psr: "project start rate",
+  imageAddRate: "image-add rate",
   addToCartRate: "add-to-cart rate",
   checkoutRate: "order conversion",
 };
@@ -258,7 +272,7 @@ function computeSensitivity(args: {
   }
 
   // Rates: ±10% relative and ±0.3pp absolute
-  const rateKeys: RateKey[] = ["psr", "addToCartRate", "checkoutRate"];
+  const rateKeys: RateKey[] = ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
   for (const k of rateKeys) {
     const cur = args.rates[k];
     if (!Number.isFinite(cur)) continue;
@@ -311,7 +325,7 @@ function Dashboard() {
 
   // Per-segment baseline rate overrides keyed by "device|productLine".
   // Resets each session so baseline always shows on load.
-  type RateKey = "psr" | "addToCartRate" | "checkoutRate";
+  type RateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
   type SegmentOverrides = Partial<Record<RateKey, string>>;
   const [segmentRates, setSegmentRates] = useState<Record<string, SegmentOverrides>>({});
 
@@ -968,6 +982,16 @@ function ChainView({
           liftActive={liftActive}
         />
         <ChainArrow />
+        {renderRateRow("imageAddRate", "Image Add Rate", affectedStep === "ImageAdded")}
+        <ChainArrow />
+        <ChainNodeRow
+          label="Image Added"
+          baseline={baselineChain.image_added}
+          lifted={liftedChain.image_added}
+          isAffected={affectedStep === "ImageAdded"}
+          liftActive={liftActive}
+        />
+        <ChainArrow />
         {renderRateRow("addToCartRate", "Add to Cart Rate", affectedStep === "ProductAdded")}
         <ChainArrow />
         <ChainNodeRow
@@ -1225,7 +1249,7 @@ function ValuePair({
 
 // ----------------------------- Segment Funnel -----------------------------
 
-type SegRateKey = "psr" | "addToCartRate" | "checkoutRate";
+type SegRateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
 type SegOverrides = Partial<Record<SegRateKey, string>>;
 
 function SegmentFunnel({
@@ -1270,6 +1294,7 @@ function SegmentFunnel({
 
   const effectiveRates: Rates = {
     psr: rateOf("psr"),
+    imageAddRate: rateOf("imageAddRate"),
     addToCartRate: rateOf("addToCartRate"),
     checkoutRate: rateOf("checkoutRate"),
   };
@@ -1339,6 +1364,27 @@ function SegmentFunnel({
           baseline={baselineChain.project_started}
           lifted={liftedChain.project_started}
           isAffected={testStep === "ProjectStarted"}
+          liftActive={liftActive}
+        />
+        <ChainArrow />
+        <SegEditableRateRow
+          label="Image Add Rate"
+          rateKey="imageAddRate"
+          defaultPct={defaultRates.imageAddRate * 100}
+          value={overrides.imageAddRate ?? ""}
+          onChangeInput={(v) => setOverride("imageAddRate", v)}
+          baseline={baselineChain.rates.imageAddRate}
+          lifted={liftedChain.rates.imageAddRate}
+          isAffected={testStep === "ImageAdded"}
+          liftActive={liftActive}
+          isOverridden={isOver("imageAddRate")}
+        />
+        <ChainArrow />
+        <ChainNodeRow
+          label="Image Added"
+          baseline={baselineChain.image_added}
+          lifted={liftedChain.image_added}
+          isAffected={testStep === "ImageAdded"}
           liftActive={liftActive}
         />
         <ChainArrow />
