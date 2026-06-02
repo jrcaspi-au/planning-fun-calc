@@ -272,7 +272,7 @@ function computeSensitivity(args: {
   }
 
   // Rates: ±10% relative and ±0.3pp absolute
-  const rateKeys: RateKey[] = ["psr", "addToCartRate", "checkoutRate"];
+  const rateKeys: RateKey[] = ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
   for (const k of rateKeys) {
     const cur = args.rates[k];
     if (!Number.isFinite(cur)) continue;
