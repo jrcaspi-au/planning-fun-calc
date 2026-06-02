@@ -1368,6 +1368,27 @@ function SegmentFunnel({
         />
         <ChainArrow />
         <SegEditableRateRow
+          label="Image Add Rate"
+          rateKey="imageAddRate"
+          defaultPct={defaultRates.imageAddRate * 100}
+          value={overrides.imageAddRate ?? ""}
+          onChangeInput={(v) => setOverride("imageAddRate", v)}
+          baseline={baselineChain.rates.imageAddRate}
+          lifted={liftedChain.rates.imageAddRate}
+          isAffected={testStep === "ImageAdded"}
+          liftActive={liftActive}
+          isOverridden={isOver("imageAddRate")}
+        />
+        <ChainArrow />
+        <ChainNodeRow
+          label="Image Added"
+          baseline={baselineChain.image_added}
+          lifted={liftedChain.image_added}
+          isAffected={testStep === "ImageAdded"}
+          liftActive={liftActive}
+        />
+        <ChainArrow />
+        <SegEditableRateRow
           label="Add to Cart Rate"
           rateKey="addToCartRate"
           defaultPct={defaultRates.addToCartRate * 100}
