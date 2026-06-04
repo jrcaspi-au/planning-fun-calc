@@ -775,7 +775,7 @@ function Dashboard() {
             <div className="mt-6 space-y-6">
               {segments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No segments with data for the selected Device / Product Line filters.
+                  No segments with data for the selected filters.
                 </p>
               ) : (
                 segments.map((seg) => (
@@ -783,7 +783,8 @@ function Dashboard() {
                     key={seg.key}
                     segmentKey={seg.key}
                     device={seg.device}
-                    productLine={seg.productLine}
+                    productLine={`${seg.visitorType} · ${seg.bookGroup}`}
+
                     baseline={seg.baseline}
                     defaultRates={seg.defaultRates}
                     overrides={segmentRates[seg.key] ?? {}}
