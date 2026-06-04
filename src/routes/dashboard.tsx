@@ -1497,6 +1497,7 @@ function SegmentFunnel({
           aov={baseline.aov}
           monthly={incrementalMonthly}
           annual={incrementalAnnual}
+          sessions={baseline.sessions}
           pdp={baseline.pdpSessions}
           rates={effectiveRates}
           liftMult={liftMult}
