@@ -750,6 +750,7 @@ function Dashboard() {
                     aov={baseline.aov}
                     monthly={aggIncrementalMonthly}
                     annual={aggIncrementalAnnual}
+                    sessions={baseline.sessions}
                     pdp={baseline.pdpSessions}
                     rates={aggregateRates}
                     liftMult={liftMult}
