@@ -710,19 +710,30 @@ function Dashboard() {
               DATA MANAGEMENT
             </h2>
             <div className="mt-4 space-y-4">
-              <FileDrop
-                id="session-upload"
-                label="Upload Segmented Session CSV"
-                ok={sessionOk}
-                onFile={(f) => handleUpload(f, "session")}
-              />
-              <FileDrop
-                id="aov-upload"
-                label="Update AOV Data (CSV)"
-                ok={aovOk}
-                onFile={(f) => handleUpload(f, "aov")}
-              />
+              <div>
+                <FileDrop
+                  id="session-upload"
+                  label="Upload Segmented Session CSV"
+                  ok={sessionOk}
+                  onFile={(f) => handleUpload(f, "session")}
+                />
+                {sessionError && (
+                  <p className="mt-2 text-xs text-destructive">{sessionError}</p>
+                )}
+              </div>
+              <div>
+                <FileDrop
+                  id="aov-upload"
+                  label="Update AOV Data (CSV)"
+                  ok={aovOk}
+                  onFile={(f) => handleUpload(f, "aov")}
+                />
+                {aovError && (
+                  <p className="mt-2 text-xs text-destructive">{aovError}</p>
+                )}
+              </div>
             </div>
+
           </div>
 
         </aside>
