@@ -215,6 +215,7 @@ const RATE_PLAIN: Record<RateKey, string> = {
 };
 
 function annualIncremental(
+  sessions: number,
   pdp: number,
   aov: number,
   rates: Rates,
@@ -223,8 +224,8 @@ function annualIncremental(
   downstream: Partial<Record<RateKey, number>> | undefined,
   safetyMult: number,
 ): number {
-  const base = computeChain(pdp, aov, rates, null, 1);
-  const lifted = computeChain(pdp, aov, rates, testStep, liftMult, downstream);
+  const base = computeChain(sessions, pdp, aov, rates, null, 1);
+  const lifted = computeChain(sessions, pdp, aov, rates, testStep, liftMult, downstream);
   return (lifted.revenue - base.revenue) * safetyMult * 12;
 }
 
