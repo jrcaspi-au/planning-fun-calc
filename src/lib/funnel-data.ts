@@ -2,15 +2,15 @@ import Papa from "papaparse";
 
 export type SessionRow = {
   device: string;
-  productLine: string;
+  visitorType: string; // "New" | "Returning"
+  bookGroup: string;   // "Books" | "Non-Books"
   sessions: number;
-  pdpSessions: number;
+  pdpSessions: number;     // product_viewed
   loginStarted: number;
   loginCompleted: number;
-  alreadyAuthenticated: number;
   projectStarted: number;
   imageAdded: number;
-  addedToCart: number;
+  addedToCart: number;     // product_added
   orders: number;
 };
 
@@ -45,80 +45,93 @@ function pick(row: Record<string, string>, aliases: string[]): string {
   return "";
 }
 
+// Normalise visitor type / book group labels coming from the CSV so that
+// the dropdowns can match them regardless of casing or surrounding spaces.
+function normVisitor(v: string): string {
+  const n = String(v ?? "").trim().toLowerCase();
+  if (n.startsWith("new")) return "New";
+  if (n.startsWith("ret")) return "Returning";
+  return v;
+}
+
+function normBook(v: string): string {
+  const n = String(v ?? "").trim().toLowerCase().replace(/[\s_\-]/g, "");
+  if (n === "books" || n === "book") return "Books";
+  if (n === "nonbooks" || n === "nonbook" || n === "notbooks") return "Non-Books";
+  return v;
+}
+
+function normDevice(v: string): string {
+  const n = String(v ?? "").trim().toLowerCase();
+  if (n.startsWith("desk")) return "Desktop";
+  if (n.startsWith("mob")) return "Mobile";
+  if (n.startsWith("tab")) return "Tablet";
+  return v;
+}
+
 export function parseSessionCsv(text: string): SessionRow[] {
   const rows = parseWithPapa(text);
   return rows
     .map((r) => ({
-      device: pick(r, ["device", "device_category", "devicecategory"]),
-      productLine: pick(r, ["product_line", "productline", "product"]),
+      device: normDevice(
+        pick(r, ["device_segment", "device", "device_category", "devicecategory"]),
+      ),
+      visitorType: normVisitor(
+        pick(r, ["visitor_type", "visitortype", "visitor"]),
+      ),
+      bookGroup: normBook(
+        pick(r, ["book_group", "bookgroup", "book"]),
+      ),
       sessions: num(
         pick(r, [
-          "sessions",
+          "avg_monthly_total_sessions",
           "total_sessions",
-          "avg_monthly_sessions",
-          "session_count",
+          "sessions",
         ]),
       ),
       pdpSessions: num(
         pick(r, [
-          "pdp_sessions",
-          "pdpsessions",
           "avg_monthly_product_viewed",
           "product_viewed",
-        ]),
-      ),
-      projectStarted: num(
-        pick(r, [
-          "project_started",
-          "projectstarted",
-          "avg_monthly_project_started",
+          "pdp_sessions",
         ]),
       ),
       loginStarted: num(
         pick(r, [
-          "log_in_started",
-          "loginstarted",
-          "login_started",
-          "avg_monthly_log_in_started",
           "avg_monthly_login_started",
+          "avg_monthly_log_in_started",
+          "login_started",
         ]),
       ),
       loginCompleted: num(
         pick(r, [
-          "log_in_completed",
-          "logincompleted",
-          "login_completed",
-          "avg_monthly_log_in_completed",
           "avg_monthly_login_completed",
+          "avg_monthly_log_in_completed",
+          "login_completed",
         ]),
       ),
-      alreadyAuthenticated: num(
-        pick(r, [
-          "already_authenticated",
-          "alreadyauthenticated",
-          "avg_monthly_already_authenticated",
-        ]),
+      projectStarted: num(
+        pick(r, ["avg_monthly_project_started", "project_started"]),
       ),
       imageAdded: num(
-        pick(r, ["image_added", "imageadded", "avg_monthly_image_added"]),
+        pick(r, ["avg_monthly_image_added", "image_added"]),
       ),
       addedToCart: num(
         pick(r, [
-          "added_to_cart",
-          "addedtocart",
-          "product_added",
           "avg_monthly_product_added",
+          "product_added",
+          "added_to_cart",
         ]),
       ),
       orders: num(
         pick(r, [
-          "orders",
-          "order_completed",
           "avg_monthly_order_completed",
+          "order_completed",
+          "orders",
         ]),
       ),
     }))
-    .filter((r) => r.device && r.productLine);
+    .filter((r) => r.device && r.visitorType && r.bookGroup);
 }
 
 export function parseAovCsv(text: string): AovRow[] {
@@ -138,7 +151,6 @@ export type Baseline = {
   pdpSessions: number;
   loginStarted: number;
   loginCompleted: number;
-  alreadyAuthenticated: number;
   projectStarted: number;
   imageAdded: number;
   addedToCart: number;
@@ -146,50 +158,70 @@ export type Baseline = {
   aov: number;
 };
 
-const ALL_DEVICES = "All Devices";
-const ALL_PRODUCTS = "All products";
+export const ALL = "All";
+
+const eq = (a: string, b: string) => norm(a) === norm(b);
 
 export function computeBaseline(
   sessionRows: SessionRow[],
   aovRows: AovRow[],
   device: string,
-  productLines: string | string[],
+  visitorType: string,
+  bookGroup: string,
 ): Baseline {
-  const eq = (a: string, b: string) => norm(a) === norm(b);
-  const matchDevice = (d: string) => device === ALL_DEVICES || eq(d, device);
-  const selected = Array.isArray(productLines) ? productLines : [productLines];
-  const allProducts =
-    selected.length === 0 || selected.some((p) => p === ALL_PRODUCTS);
-  const matchProduct = (p: string) =>
-    allProducts || selected.some((sel) => eq(sel, p));
+  const matchDevice = (d: string) => device === ALL || eq(d, device);
+  const matchVisitor = (v: string) => visitorType === ALL || eq(v, visitorType);
+  const matchBook = (b: string) => bookGroup === ALL || eq(b, bookGroup);
 
-  const sessions = sessionRows.filter(
-    (r) => matchDevice(r.device) && matchProduct(r.productLine),
-  );
-  const aovs = aovRows.filter(
-    (r) => matchDevice(r.device) && matchProduct(r.productLine),
+  const filtered = sessionRows.filter(
+    (r) => matchDevice(r.device) && matchVisitor(r.visitorType) && matchBook(r.bookGroup),
   );
 
-  const sum = sessions.reduce(
+  // Columns that are device×visitor totals duplicated across book rows.
+  // For these, take ONE row per (device, visitor) cell to avoid double-counting
+  // when book group = All.
+  const seen = new Set<string>();
+  let sessions = 0;
+  let loginStarted = 0;
+  let loginCompleted = 0;
+  for (const r of filtered) {
+    const k = `${r.device}|${r.visitorType}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    sessions += r.sessions;
+    loginStarted += r.loginStarted;
+    loginCompleted += r.loginCompleted;
+  }
+
+  // All other columns sum normally across selected dimensions.
+  const sum = filtered.reduce(
     (acc, r) => ({
-      sessions: acc.sessions + r.sessions,
       pdpSessions: acc.pdpSessions + r.pdpSessions,
-      loginStarted: acc.loginStarted + r.loginStarted,
-      loginCompleted: acc.loginCompleted + r.loginCompleted,
-      alreadyAuthenticated: acc.alreadyAuthenticated + r.alreadyAuthenticated,
       projectStarted: acc.projectStarted + r.projectStarted,
       imageAdded: acc.imageAdded + r.imageAdded,
       addedToCart: acc.addedToCart + r.addedToCart,
       orders: acc.orders + r.orders,
     }),
-    { sessions: 0, pdpSessions: 0, loginStarted: 0, loginCompleted: 0, alreadyAuthenticated: 0, projectStarted: 0, imageAdded: 0, addedToCart: 0, orders: 0 },
+    { pdpSessions: 0, projectStarted: 0, imageAdded: 0, addedToCart: 0, orders: 0 },
   );
 
+  // AOV filtered by device only (visitor/book don't apply to the AOV file).
+  const aovs = aovRows.filter((r) => device === ALL || eq(r.device, device));
   const aovOrderTotal = aovs.reduce((a, r) => a + r.orders, 0);
   const aovWeighted = aovs.reduce((a, r) => a + r.aov * r.orders, 0);
   const aov = aovOrderTotal > 0 ? aovWeighted / aovOrderTotal : 0;
 
-  return { ...sum, aov };
+  return {
+    sessions,
+    pdpSessions: sum.pdpSessions,
+    loginStarted,
+    loginCompleted,
+    projectStarted: sum.projectStarted,
+    imageAdded: sum.imageAdded,
+    addedToCart: sum.addedToCart,
+    orders: sum.orders,
+    aov,
+  };
 }
 
 export const fmtInt = (n: number) =>
