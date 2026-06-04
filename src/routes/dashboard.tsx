@@ -503,7 +503,7 @@ function Dashboard() {
 
   const aggregateLiftedChain = useMemo<ChainState>(() => {
     if (liftMult === 1) return aggregateBaselineChain;
-    return computeChain(baseline.pdpSessions, baseline.aov, aggregateRates, testStep, liftMult, parsedDownstream);
+    return computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, aggregateRates, testStep, liftMult, parsedDownstream);
   }, [aggregateBaselineChain, aggregateRates, baseline, liftMult, testStep, parsedDownstream]);
 
   const aggIncrementalMonthly = (aggregateLiftedChain.revenue - aggregateBaselineChain.revenue) * safetyMult;
