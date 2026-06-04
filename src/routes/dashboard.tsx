@@ -726,6 +726,27 @@ function Dashboard() {
             </Tabs>
           </div>
 
+          {sessionRows.length === 0 && (
+            <div className="mt-6 rounded-md border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+              Upload a segmented session CSV to populate the funnel.
+              <div className="mt-1 text-xs">
+                Expected columns: DEVICE_SEGMENT, VISITOR_TYPE, BOOK_GROUP, AVG_MONTHLY_TOTAL_SESSIONS, AVG_MONTHLY_PRODUCT_VIEWED, AVG_MONTHLY_LOGIN_STARTED, AVG_MONTHLY_LOGIN_COMPLETED, AVG_MONTHLY_PROJECT_STARTED, AVG_MONTHLY_IMAGE_ADDED, AVG_MONTHLY_PRODUCT_ADDED, AVG_MONTHLY_ORDER_COMPLETED.
+              </div>
+            </div>
+          )}
+
+          {rateBreaches.length > 0 && (
+            <div className="mt-6 flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">Data looks like raw event counts, not session-deduped — re-run the source query.</p>
+                <p className="mt-1 text-xs opacity-90">
+                  These rates exceed 100%: {rateBreaches.map((b) => `${RATE_LABEL[b.key]} ${b.pct.toFixed(1)}%`).join(", ")}.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Test Configuration panel */}
           <TestConfigPanel
             testStep={testStep}
@@ -733,6 +754,7 @@ function Dashboard() {
             testLift={testLift}
             setTestLift={setTestLift}
           />
+
 
           {mode === "aggregate" ? (
             <div className="mt-6">
