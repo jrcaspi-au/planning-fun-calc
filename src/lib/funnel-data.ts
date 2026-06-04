@@ -51,6 +51,14 @@ export function parseSessionCsv(text: string): SessionRow[] {
     .map((r) => ({
       device: pick(r, ["device", "device_category", "devicecategory"]),
       productLine: pick(r, ["product_line", "productline", "product"]),
+      sessions: num(
+        pick(r, [
+          "sessions",
+          "total_sessions",
+          "avg_monthly_sessions",
+          "session_count",
+        ]),
+      ),
       pdpSessions: num(
         pick(r, [
           "pdp_sessions",
