@@ -134,6 +134,7 @@ export function parseAovCsv(text: string): AovRow[] {
 }
 
 export type Baseline = {
+  sessions: number;
   pdpSessions: number;
   loginStarted: number;
   loginCompleted: number;
