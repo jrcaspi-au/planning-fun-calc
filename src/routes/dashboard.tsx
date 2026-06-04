@@ -626,6 +626,13 @@ function Dashboard() {
             >
               README
             </Link>
+            <Link
+              to="/aov-readme"
+              className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              activeProps={{ className: "rounded-md px-3 py-1.5 bg-accent text-foreground" }}
+            >
+              AOV README
+            </Link>
           </nav>
         </div>
         <Button

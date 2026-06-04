@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReadmeRouteImport } from './routes/readme'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AovReadmeRouteImport } from './routes/aov-readme'
 import { Route as IndexRouteImport } from './routes/index'
 
 const ReadmeRoute = ReadmeRouteImport.update({
@@ -23,6 +24,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AovReadmeRoute = AovReadmeRouteImport.update({
+  id: '/aov-readme',
+  path: '/aov-readme',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,30 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aov-readme': typeof AovReadmeRoute
   '/dashboard': typeof DashboardRoute
   '/readme': typeof ReadmeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aov-readme': typeof AovReadmeRoute
   '/dashboard': typeof DashboardRoute
   '/readme': typeof ReadmeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aov-readme': typeof AovReadmeRoute
   '/dashboard': typeof DashboardRoute
   '/readme': typeof ReadmeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/readme'
+  fullPaths: '/' | '/aov-readme' | '/dashboard' | '/readme'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/readme'
-  id: '__root__' | '/' | '/dashboard' | '/readme'
+  to: '/' | '/aov-readme' | '/dashboard' | '/readme'
+  id: '__root__' | '/' | '/aov-readme' | '/dashboard' | '/readme'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AovReadmeRoute: typeof AovReadmeRoute
   DashboardRoute: typeof DashboardRoute
   ReadmeRoute: typeof ReadmeRoute
 }
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aov-readme': {
+      id: '/aov-readme'
+      path: '/aov-readme'
+      fullPath: '/aov-readme'
+      preLoaderRoute: typeof AovReadmeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,9 +104,20 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AovReadmeRoute: AovReadmeRoute,
   DashboardRoute: DashboardRoute,
   ReadmeRoute: ReadmeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
