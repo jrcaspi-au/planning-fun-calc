@@ -490,7 +490,19 @@ function Dashboard() {
   const aggIncrementalMonthly = (aggregateLiftedChain.revenue - aggregateBaselineChain.revenue) * safetyMult;
   const aggIncrementalAnnual = aggIncrementalMonthly * 12;
 
+  // Validate that no in-funnel rate exceeds 100%. Login is off-funnel so excluded.
+  const rateBreaches = useMemo(() => {
+    const r = aggregateDefaultRates;
+    const checks: Array<{ key: RateKey; pct: number }> = [];
+    (["pdpRate", "psr", "imageAddRate", "addToCartRate", "checkoutRate"] as RateKey[]).forEach((k) => {
+      const v = r[k];
+      if (Number.isFinite(v) && v > 1) checks.push({ key: k, pct: v * 100 });
+    });
+    return checks;
+  }, [aggregateDefaultRates]);
+
   if (!authReady) return null;
+
 
   if (dataLoading) {
     return (
