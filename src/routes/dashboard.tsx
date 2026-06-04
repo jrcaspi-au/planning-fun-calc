@@ -639,8 +639,8 @@ function Dashboard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {["All Devices", "Desktop", "Mobile", "Tablet"].map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  {[ALL, "Desktop", "Mobile", "Tablet"].map((d) => (
+                    <SelectItem key={d} value={d}>{d === ALL ? "All Devices" : d}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
