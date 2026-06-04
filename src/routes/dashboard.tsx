@@ -25,14 +25,14 @@ import {
   safeDiv,
   parseSessionCsv,
   parseAovCsv,
+  ALL,
 } from "@/lib/funnel-data";
-import sessionCsvRaw from "@/data/session_level.csv?raw";
 import aovCsvRaw from "@/data/aov_data.csv?raw";
 import { toast } from "sonner";
-import { Check, Upload, Download, Loader2, ArrowDown } from "lucide-react";
+import { Check, Upload, Download, Loader2, ArrowDown, AlertTriangle } from "lucide-react";
 import { Fragment } from "react";
-import { HelpCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
