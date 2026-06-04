@@ -365,6 +365,9 @@ function Dashboard() {
 
   const [sessionOk, setSessionOk] = useState(false);
   const [aovOk, setAovOk] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [aovError, setAovError] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!isAuthenticated()) navigate({ to: "/" });
@@ -523,13 +526,8 @@ function Dashboard() {
     );
   }
 
-  if (dataError) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm text-destructive">Failed to load data: {dataError}</p>
-      </div>
-    );
-  }
+
+
 
   const handleUpload = async (file: File | undefined, kind: "session" | "aov") => {
     if (!file) return;
@@ -537,25 +535,34 @@ function Dashboard() {
       const text = await file.text();
       if (kind === "session") {
         const rows = parseSessionCsv(text);
-        if (!rows.length) throw new Error("No rows parsed");
+        if (!rows.length) throw new Error("Session data is empty.");
+        // Replace existing rows with the freshly parsed set.
         setSessionRows(rows);
         try { localStorage.setItem("funnel.sessionCsv", text); } catch {}
+        setSessionError(null);
         setSessionOk(true);
+        console.log(`[funnel] Session CSV loaded: ${rows.length} rows`);
         toast.success(`Session data updated (${rows.length} rows)`);
         setTimeout(() => setSessionOk(false), 2500);
       } else {
         const rows = parseAovCsv(text);
-        if (!rows.length) throw new Error("No rows parsed");
+        if (!rows.length) throw new Error("AOV data is empty.");
         setAovRows(rows);
         try { localStorage.setItem("funnel.aovCsv", text); } catch {}
+        setAovError(null);
         setAovOk(true);
+        console.log(`[funnel] AOV CSV loaded: ${rows.length} rows`);
         toast.success(`AOV data updated (${rows.length} rows)`);
         setTimeout(() => setAovOk(false), 2500);
       }
     } catch (err) {
-      toast.error(`Failed to parse CSV: ${err instanceof Error ? err.message : "unknown error"}`);
+      // Surface inline below the upload zone; keep existing data unchanged.
+      const msg = err instanceof Error ? err.message : "Failed to parse CSV";
+      if (kind === "session") setSessionError(msg);
+      else setAovError(msg);
     }
   };
+
 
   const handleDownload = () => {
     const liftPctNum = parseFloat(testLift) || 0;
@@ -703,19 +710,30 @@ function Dashboard() {
               DATA MANAGEMENT
             </h2>
             <div className="mt-4 space-y-4">
-              <FileDrop
-                id="session-upload"
-                label="Upload Segmented Session CSV"
-                ok={sessionOk}
-                onFile={(f) => handleUpload(f, "session")}
-              />
-              <FileDrop
-                id="aov-upload"
-                label="Update AOV Data (CSV)"
-                ok={aovOk}
-                onFile={(f) => handleUpload(f, "aov")}
-              />
+              <div>
+                <FileDrop
+                  id="session-upload"
+                  label="Upload Segmented Session CSV"
+                  ok={sessionOk}
+                  onFile={(f) => handleUpload(f, "session")}
+                />
+                {sessionError && (
+                  <p className="mt-2 text-xs text-destructive">{sessionError}</p>
+                )}
+              </div>
+              <div>
+                <FileDrop
+                  id="aov-upload"
+                  label="Update AOV Data (CSV)"
+                  ok={aovOk}
+                  onFile={(f) => handleUpload(f, "aov")}
+                />
+                {aovError && (
+                  <p className="mt-2 text-xs text-destructive">{aovError}</p>
+                )}
+              </div>
             </div>
+
           </div>
 
         </aside>
