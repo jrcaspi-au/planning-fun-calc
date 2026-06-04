@@ -260,6 +260,7 @@ function buildAssumptionsText(args: {
 type SensCandidate = { label: string; swing: number };
 
 function computeSensitivity(args: {
+  sessions: number;
   pdp: number;
   aov: number;
   rates: Rates;
@@ -269,7 +270,7 @@ function computeSensitivity(args: {
   safetyMult: number;
 }): SensCandidate[] {
   const base = annualIncremental(
-    args.pdp, args.aov, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult,
+    args.sessions, args.pdp, args.aov, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult,
   );
   if (!Number.isFinite(base) || args.liftMult === 1) return [];
   const candidates: SensCandidate[] = [];
@@ -279,33 +280,33 @@ function computeSensitivity(args: {
 
   // AOV ±5%
   {
-    const hi = annualIncremental(args.pdp, args.aov * 1.05, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
-    const lo = annualIncremental(args.pdp, args.aov * 0.95, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+    const hi = annualIncremental(args.sessions, args.pdp, args.aov * 1.05, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+    const lo = annualIncremental(args.sessions, args.pdp, args.aov * 0.95, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
     candidates.push({ label: `AOV (±5% = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
   }
 
   // Lift size ±10% (relative on (liftMult - 1))
   {
     const delta = args.liftMult - 1;
-    const hi = annualIncremental(args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 1.1, args.downstream, args.safetyMult);
-    const lo = annualIncremental(args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 0.9, args.downstream, args.safetyMult);
+    const hi = annualIncremental(args.sessions, args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 1.1, args.downstream, args.safetyMult);
+    const lo = annualIncremental(args.sessions, args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 0.9, args.downstream, args.safetyMult);
     candidates.push({ label: `lift size (±10% = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
   }
 
   // Rates: ±10% relative and ±0.3pp absolute
-  const rateKeys: RateKey[] = ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
+  const rateKeys: RateKey[] = ["pdpRate", "psr", "imageAddRate", "addToCartRate", "checkoutRate"];
   for (const k of rateKeys) {
     const cur = args.rates[k];
     if (!Number.isFinite(cur)) continue;
     {
-      const hi = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: cur * 1.1 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
-      const lo = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: cur * 0.9 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const hi = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: cur * 1.1 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const lo = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: cur * 0.9 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
       candidates.push({ label: `baseline ${RATE_PLAIN[k]} (±10% = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
     }
     {
       const pp = 0.003;
-      const hi = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: cur + pp }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
-      const lo = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: Math.max(0, cur - pp) }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const hi = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: cur + pp }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const lo = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: Math.max(0, cur - pp) }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
       candidates.push({ label: `baseline ${RATE_PLAIN[k]} (±0.3pp = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
     }
   }
