@@ -324,7 +324,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const [authReady, setAuthReady] = useState(false);
 
-  const [device, setDevice] = useState<string>("All Devices");
+  const [device, setDevice] = useState<string>(ALL);
   const [visitorType, setVisitorType] = useState<string>(ALL);
   const [bookGroup, setBookGroup] = useState<string>(ALL);
   const [safetyMargin, setSafetyMargin] = useState<string>("75");
