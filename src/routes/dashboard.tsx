@@ -714,11 +714,7 @@ function Dashboard() {
           </div>
 
           <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-            No session, user, or timeline constraints applied. Each funnel step
-            is counted independently based on the event date. Steps are not
-            required to occur together, in sequence, or within any window; a
-            step count reflects all qualifying events during the selected time
-            period, regardless of who or what session generated them.
+            See the <Link to="/readme" className="underline hover:text-foreground transition-colors">README</Link> for methodology notes and definitions.
           </p>
 
           <div className="mt-8 border-t pt-6">
