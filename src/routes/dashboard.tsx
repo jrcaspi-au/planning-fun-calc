@@ -61,6 +61,7 @@ const DEVICES = ["Desktop", "Mobile", "Tablet"] as const;
 // Funnel chain steps available to lift. The label identifies the node whose
 // inbound rate is lifted (Product Viewed lifts the input volume itself).
 type LiftStep =
+  | "Sessions"
   | "ProductViewed"
   | "ProjectStarted"
   | "ImageAdded"
@@ -68,16 +69,18 @@ type LiftStep =
   | "OrderCompleted";
 
 const LIFT_STEPS: { value: LiftStep; label: string; rateLabel: string }[] = [
-  { value: "ProductViewed", label: "Product Viewed", rateLabel: "" },
+  { value: "Sessions", label: "Sessions", rateLabel: "" },
+  { value: "ProductViewed", label: "Product Viewed", rateLabel: "PDP Rate" },
   { value: "ProjectStarted", label: "Project Started", rateLabel: "PSR" },
   { value: "ImageAdded", label: "Image Added", rateLabel: "Image Add Rate" },
   { value: "ProductAdded", label: "Product Added", rateLabel: "Add to Cart Rate" },
   { value: "OrderCompleted", label: "Order Completed", rateLabel: "Checkout Rate" },
 ];
 
-type RateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+type RateKey = "pdpRate" | "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
 
 type Rates = {
+  pdpRate: number;
   psr: number;
   imageAddRate: number;
   addToCartRate: number;
@@ -88,6 +91,8 @@ type Rates = {
 // (The lifted step's own rate is the one being lifted.)
 function downstreamRateKeys(s: LiftStep): RateKey[] {
   switch (s) {
+    case "Sessions":
+      return ["pdpRate", "psr", "imageAddRate", "addToCartRate", "checkoutRate"];
     case "ProductViewed":
       return ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
     case "ProjectStarted":
@@ -102,6 +107,7 @@ function downstreamRateKeys(s: LiftStep): RateKey[] {
 }
 
 const RATE_LABEL: Record<RateKey, string> = {
+  pdpRate: "PDP Rate",
   psr: "PSR",
   imageAddRate: "Image Add Rate",
   addToCartRate: "Add to Cart Rate",
@@ -109,6 +115,7 @@ const RATE_LABEL: Record<RateKey, string> = {
 };
 
 type ChainState = {
+  sessions: number;
   product_viewed: number;
   project_started: number;
   image_added: number;
