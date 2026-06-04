@@ -565,6 +565,7 @@ function Dashboard() {
     const rows: string[][] = [
       ["Test step", stepLabel, ""],
       ["Test lift %", `${liftPctNum}%`, ""],
+      ["Sessions", fmt(aggregateBaselineChain.sessions), fmt(aggregateLiftedChain.sessions)],
       ["Product Viewed", fmt(aggregateBaselineChain.product_viewed), fmt(aggregateLiftedChain.product_viewed)],
       ["Project Started", fmt(aggregateBaselineChain.project_started), fmt(aggregateLiftedChain.project_started)],
       ["Product Added", fmt(aggregateBaselineChain.product_added), fmt(aggregateLiftedChain.product_added)],
