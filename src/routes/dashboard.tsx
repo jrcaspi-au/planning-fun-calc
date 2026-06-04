@@ -526,13 +526,8 @@ function Dashboard() {
     );
   }
 
-  if (dataError) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm text-destructive">Failed to load data: {dataError}</p>
-      </div>
-    );
-  }
+
+
 
   const handleUpload = async (file: File | undefined, kind: "session" | "aov") => {
     if (!file) return;
