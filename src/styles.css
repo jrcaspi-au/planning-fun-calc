@@ -41,6 +41,8 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-nav-active: var(--nav-active);
+  --color-nav-active-foreground: var(--nav-active-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -85,6 +87,9 @@
   /* muted terracotta accent */
   --accent: oklch(0.62 0.09 45);
   --accent-foreground: oklch(0.985 0.008 85);
+  /* army green nav highlight */
+  --nav-active: oklch(0.42 0.05 135);
+  --nav-active-foreground: oklch(0.985 0.008 85);
   --destructive: oklch(0.52 0.13 28);
   --destructive-foreground: oklch(0.985 0.008 85);
   /* warm subtle gray borders */
@@ -121,6 +126,8 @@
   --muted-foreground: oklch(0.7 0.015 70);
   --accent: oklch(0.65 0.09 45);
   --accent-foreground: oklch(0.2 0.012 60);
+  --nav-active: oklch(0.5 0.06 135);
+  --nav-active-foreground: oklch(0.985 0.008 85);
   --destructive: oklch(0.6 0.16 28);
   --destructive-foreground: oklch(0.95 0.01 80);
   --border: oklch(1 0 0 / 12%);

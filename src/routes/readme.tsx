@@ -46,21 +46,21 @@ function ReadmePage() {
             <Link
               to="/dashboard"
               className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              activeProps={{ className: "rounded-md px-3 py-1.5 bg-accent text-foreground" }}
+              activeProps={{ className: "rounded-md px-3 py-1.5 bg-nav-active text-nav-active-foreground" }}
             >
               Calculator
             </Link>
             <Link
               to="/readme"
               className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              activeProps={{ className: "rounded-md px-3 py-1.5 bg-accent text-foreground" }}
+              activeProps={{ className: "rounded-md px-3 py-1.5 bg-nav-active text-nav-active-foreground" }}
             >
               README
             </Link>
             <Link
               to="/aov-readme"
               className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              activeProps={{ className: "rounded-md px-3 py-1.5 bg-accent text-foreground" }}
+              activeProps={{ className: "rounded-md px-3 py-1.5 bg-nav-active text-nav-active-foreground" }}
             >
               AOV README
             </Link>
