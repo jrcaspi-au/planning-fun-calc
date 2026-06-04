@@ -620,12 +620,31 @@ function Dashboard() {
             </div>
 
             <div className="space-y-2">
-              <Label>Product Line</Label>
-              <ProductLineMultiSelect
-                options={PRODUCT_LINES}
-                value={productLines}
-                onChange={setProductLines}
-              />
+              <Label>Visitor Type</Label>
+              <Select value={visitorType} onValueChange={setVisitorType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VISITOR_TYPES.map((v) => (
+                    <SelectItem key={v} value={v}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Book Group</Label>
+              <Select value={bookGroup} onValueChange={setBookGroup}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BOOK_GROUPS.map((b) => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -666,7 +685,7 @@ function Dashboard() {
             <div className="mt-4 space-y-4">
               <FileDrop
                 id="session-upload"
-                label="Update Session Data (CSV)"
+                label="Upload Segmented Session CSV"
                 ok={sessionOk}
                 onFile={(f) => handleUpload(f, "session")}
               />
@@ -678,6 +697,7 @@ function Dashboard() {
               />
             </div>
           </div>
+
         </aside>
 
         {/* OUTPUTS */}
