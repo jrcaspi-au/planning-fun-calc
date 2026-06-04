@@ -602,7 +602,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b px-8 py-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           <h1 className="font-serif text-xl font-medium tracking-tight"><span className="underline underline-offset-4 decoration-1">Planning</span> Funnel Calculator</h1>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 ring-1 ring-emerald-500/20">
             <span className="relative flex h-2 w-2">
@@ -611,6 +611,22 @@ function Dashboard() {
             </span>
             Planning
           </span>
+          <nav className="flex items-center gap-1 text-sm">
+            <Link
+              to="/dashboard"
+              className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              activeProps={{ className: "rounded-md px-3 py-1.5 bg-accent text-foreground" }}
+            >
+              Calculator
+            </Link>
+            <Link
+              to="/readme"
+              className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              activeProps={{ className: "rounded-md px-3 py-1.5 bg-accent text-foreground" }}
+            >
+              README
+            </Link>
+          </nav>
         </div>
         <Button
           variant="outline"
