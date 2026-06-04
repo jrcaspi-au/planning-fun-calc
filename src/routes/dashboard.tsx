@@ -316,8 +316,9 @@ function Dashboard() {
   const navigate = useNavigate();
   const [authReady, setAuthReady] = useState(false);
 
-  const [device, setDevice] = useState("All Devices");
-  const [productLines, setProductLines] = useState<string[]>([PRODUCT_LINES[0]]);
+  const [device, setDevice] = useState<string>("All Devices");
+  const [visitorType, setVisitorType] = useState<string>(ALL);
+  const [bookGroup, setBookGroup] = useState<string>(ALL);
   const [safetyMargin, setSafetyMargin] = useState<string>("75");
 
   type Mode = "aggregate" | "segmented";
@@ -335,7 +336,7 @@ function Dashboard() {
   const [testLift, setTestLift] = useState<string>("");
 
 
-  // Per-segment baseline rate overrides keyed by "device|productLine".
+  // Per-segment baseline rate overrides keyed by "device|visitor|book".
   // Resets each session so baseline always shows on load.
   type RateKey = "pdpRate" | "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
   type SegmentOverrides = Partial<Record<RateKey, string>>;
@@ -375,15 +376,10 @@ function Dashboard() {
           typeof window !== "undefined"
             ? localStorage.getItem("funnel.aovCsv")
             : null;
-        const sessionText = storedSession ?? sessionCsvRaw;
         const aovText = storedAov ?? aovCsvRaw;
-        const [s, a] = await Promise.all([
-          Promise.resolve(parseSessionCsv(sessionText)),
-          Promise.resolve(parseAovCsv(aovText)),
-        ]);
+        const s = storedSession ? parseSessionCsv(storedSession) : [];
+        const a = parseAovCsv(aovText);
         if (cancelled) return;
-        if (!s.length) throw new Error("Session data is empty");
-        if (!a.length) throw new Error("AOV data is empty");
         setSessionRows(s);
         setAovRows(a);
         setDataError(null);
@@ -400,47 +396,42 @@ function Dashboard() {
   }, []);
 
   const baseline = useMemo(
-    () => computeBaseline(sessionRows, aovRows, device, productLines),
-    [sessionRows, aovRows, device, productLines],
+    () => computeBaseline(sessionRows, aovRows, device, visitorType, bookGroup),
+    [sessionRows, aovRows, device, visitorType, bookGroup],
   );
 
-  const SEGMENT_PRODUCTS = useMemo(
-    () => PRODUCT_LINES.filter((p) => p !== "All products"),
-    [],
-  );
-
-  // Build available segments (device × product) that have data, filtered by
-  // the left-hand Device / Product Line inputs.
+  // Build available segments (one per row in CSV) filtered by the current selectors.
   const segments = useMemo(() => {
     const list: Array<{
       key: string;
       device: string;
-      productLine: string;
+      visitorType: string;
+      bookGroup: string;
       baseline: Baseline;
       defaultRates: Rates;
     }> = [];
-    const devicesToShow =
-      device === "All Devices" ? (DEVICES as readonly string[]) : [device];
-    const allProducts =
-      productLines.length === 0 || productLines.includes("All products");
-    const productsToShow = allProducts
-      ? SEGMENT_PRODUCTS
-      : SEGMENT_PRODUCTS.filter((p) => productLines.includes(p));
-    for (const d of devicesToShow) {
-      for (const p of productsToShow) {
-        const b = computeBaseline(sessionRows, aovRows, d, [p]);
-        if (!b.pdpSessions) continue;
-        list.push({
-          key: `${d}|${p}`,
-          device: d,
-          productLine: p,
-          baseline: b,
-          defaultRates: ratesFromBaseline(b),
-        });
-      }
+    const matchDev = (d: string) =>
+      device === "All Devices" || d.toLowerCase() === device.toLowerCase();
+    const matchVis = (v: string) =>
+      visitorType === ALL || v.toLowerCase() === visitorType.toLowerCase();
+    const matchBook = (b: string) =>
+      bookGroup === ALL || b.toLowerCase() === bookGroup.toLowerCase();
+    for (const r of sessionRows) {
+      if (!matchDev(r.device) || !matchVis(r.visitorType) || !matchBook(r.bookGroup)) continue;
+      const b = computeBaseline(sessionRows, aovRows, r.device, r.visitorType, r.bookGroup);
+      if (!b.pdpSessions && !b.sessions) continue;
+      list.push({
+        key: `${r.device}|${r.visitorType}|${r.bookGroup}`,
+        device: r.device,
+        visitorType: r.visitorType,
+        bookGroup: r.bookGroup,
+        baseline: b,
+        defaultRates: ratesFromBaseline(b),
+      });
     }
     return list;
-  }, [sessionRows, aovRows, SEGMENT_PRODUCTS, device, productLines]);
+  }, [sessionRows, aovRows, device, visitorType, bookGroup]);
+
 
   const liftMult = useMemo(() => {
     const n = parseFloat(testLift);
