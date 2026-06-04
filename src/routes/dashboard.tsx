@@ -1271,7 +1271,7 @@ function ValuePair({
 
 // ----------------------------- Segment Funnel -----------------------------
 
-type SegRateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+type SegRateKey = "pdpRate" | "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
 type SegOverrides = Partial<Record<SegRateKey, string>>;
 
 function SegmentFunnel({
@@ -1315,14 +1315,15 @@ function SegmentFunnel({
   };
 
   const effectiveRates: Rates = {
+    pdpRate: rateOf("pdpRate"),
     psr: rateOf("psr"),
     imageAddRate: rateOf("imageAddRate"),
     addToCartRate: rateOf("addToCartRate"),
     checkoutRate: rateOf("checkoutRate"),
   };
 
-  const baselineChain = computeChain(baseline.pdpSessions, baseline.aov, defaultRates, null, 1);
-  const liftedChain = computeChain(baseline.pdpSessions, baseline.aov, effectiveRates, testStep, liftMult, downstreamOverrides);
+  const baselineChain = computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, defaultRates, null, 1);
+  const liftedChain = computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, effectiveRates, testStep, liftMult, downstreamOverrides);
   const isOver = (k: RateKey) => liftActive && !!overriddenSet?.has(k);
 
   const incrementalMonthly = (liftedChain.revenue - baselineChain.revenue) * safetyMult;
