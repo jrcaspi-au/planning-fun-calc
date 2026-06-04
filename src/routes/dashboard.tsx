@@ -11,9 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown } from "lucide-react";
+
+
 import { isAuthenticated, logout } from "@/lib/auth";
 import {
   type SessionRow,
