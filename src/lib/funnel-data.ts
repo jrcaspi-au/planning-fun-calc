@@ -3,6 +3,7 @@ import Papa from "papaparse";
 export type SessionRow = {
   device: string;
   productLine: string;
+  sessions: number;
   pdpSessions: number;
   loginStarted: number;
   loginCompleted: number;
@@ -50,6 +51,14 @@ export function parseSessionCsv(text: string): SessionRow[] {
     .map((r) => ({
       device: pick(r, ["device", "device_category", "devicecategory"]),
       productLine: pick(r, ["product_line", "productline", "product"]),
+      sessions: num(
+        pick(r, [
+          "sessions",
+          "total_sessions",
+          "avg_monthly_sessions",
+          "session_count",
+        ]),
+      ),
       pdpSessions: num(
         pick(r, [
           "pdp_sessions",
@@ -125,6 +134,7 @@ export function parseAovCsv(text: string): AovRow[] {
 }
 
 export type Baseline = {
+  sessions: number;
   pdpSessions: number;
   loginStarted: number;
   loginCompleted: number;
@@ -162,6 +172,7 @@ export function computeBaseline(
 
   const sum = sessions.reduce(
     (acc, r) => ({
+      sessions: acc.sessions + r.sessions,
       pdpSessions: acc.pdpSessions + r.pdpSessions,
       loginStarted: acc.loginStarted + r.loginStarted,
       loginCompleted: acc.loginCompleted + r.loginCompleted,
@@ -171,7 +182,7 @@ export function computeBaseline(
       addedToCart: acc.addedToCart + r.addedToCart,
       orders: acc.orders + r.orders,
     }),
-    { pdpSessions: 0, loginStarted: 0, loginCompleted: 0, alreadyAuthenticated: 0, projectStarted: 0, imageAdded: 0, addedToCart: 0, orders: 0 },
+    { sessions: 0, pdpSessions: 0, loginStarted: 0, loginCompleted: 0, alreadyAuthenticated: 0, projectStarted: 0, imageAdded: 0, addedToCart: 0, orders: 0 },
   );
 
   const aovOrderTotal = aovs.reduce((a, r) => a + r.orders, 0);

@@ -61,6 +61,7 @@ const DEVICES = ["Desktop", "Mobile", "Tablet"] as const;
 // Funnel chain steps available to lift. The label identifies the node whose
 // inbound rate is lifted (Product Viewed lifts the input volume itself).
 type LiftStep =
+  | "Sessions"
   | "ProductViewed"
   | "ProjectStarted"
   | "ImageAdded"
@@ -68,16 +69,18 @@ type LiftStep =
   | "OrderCompleted";
 
 const LIFT_STEPS: { value: LiftStep; label: string; rateLabel: string }[] = [
-  { value: "ProductViewed", label: "Product Viewed", rateLabel: "" },
+  { value: "Sessions", label: "Sessions", rateLabel: "" },
+  { value: "ProductViewed", label: "Product Viewed", rateLabel: "PDP Rate" },
   { value: "ProjectStarted", label: "Project Started", rateLabel: "PSR" },
   { value: "ImageAdded", label: "Image Added", rateLabel: "Image Add Rate" },
   { value: "ProductAdded", label: "Product Added", rateLabel: "Add to Cart Rate" },
   { value: "OrderCompleted", label: "Order Completed", rateLabel: "Checkout Rate" },
 ];
 
-type RateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+type RateKey = "pdpRate" | "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
 
 type Rates = {
+  pdpRate: number;
   psr: number;
   imageAddRate: number;
   addToCartRate: number;
@@ -88,6 +91,8 @@ type Rates = {
 // (The lifted step's own rate is the one being lifted.)
 function downstreamRateKeys(s: LiftStep): RateKey[] {
   switch (s) {
+    case "Sessions":
+      return ["pdpRate", "psr", "imageAddRate", "addToCartRate", "checkoutRate"];
     case "ProductViewed":
       return ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
     case "ProjectStarted":
@@ -102,6 +107,7 @@ function downstreamRateKeys(s: LiftStep): RateKey[] {
 }
 
 const RATE_LABEL: Record<RateKey, string> = {
+  pdpRate: "PDP Rate",
   psr: "PSR",
   imageAddRate: "Image Add Rate",
   addToCartRate: "Add to Cart Rate",
@@ -109,6 +115,7 @@ const RATE_LABEL: Record<RateKey, string> = {
 };
 
 type ChainState = {
+  sessions: number;
   product_viewed: number;
   project_started: number;
   image_added: number;
@@ -119,6 +126,7 @@ type ChainState = {
 };
 
 function computeChain(
+  sessions: number,
   pdpSessions: number,
   aov: number,
   rates: Rates,
@@ -127,9 +135,10 @@ function computeChain(
   downstreamOverrides?: Partial<Record<RateKey, number>>,
 ): ChainState {
   const r = { ...rates };
-  let product_viewed = pdpSessions;
+  let sessionsVal = sessions;
   if (liftStep && liftMult !== 1) {
-    if (liftStep === "ProductViewed") product_viewed *= liftMult;
+    if (liftStep === "Sessions") sessionsVal *= liftMult;
+    else if (liftStep === "ProductViewed") r.pdpRate *= liftMult;
     else if (liftStep === "ProjectStarted") r.psr *= liftMult;
     else if (liftStep === "ImageAdded") r.imageAddRate *= liftMult;
     else if (liftStep === "ProductAdded") r.addToCartRate *= liftMult;
@@ -143,12 +152,19 @@ function computeChain(
       if (v !== undefined && Number.isFinite(v)) r[k] = v;
     }
   }
+  // Sessions data may not be available yet; when missing, fall back to
+  // pdpSessions as the top of the funnel and surface "—" for Sessions / PDP Rate.
+  const hasSessionsData = sessionsVal > 0 && Number.isFinite(r.pdpRate) && r.pdpRate > 0;
+  const product_viewed = hasSessionsData ? sessionsVal * r.pdpRate : pdpSessions;
+  const sessionsOut = hasSessionsData ? sessionsVal : NaN;
+  if (!hasSessionsData) r.pdpRate = NaN;
   const project_started = product_viewed * r.psr;
   const image_added = project_started * r.imageAddRate;
   const product_added = image_added * r.addToCartRate;
   const order_completed = product_added * r.checkoutRate;
   const revenue = order_completed * aov;
   return {
+    sessions: sessionsOut,
     product_viewed,
     project_started,
     image_added,
@@ -161,6 +177,7 @@ function computeChain(
 
 function ratesFromBaseline(b: Baseline): Rates {
   return {
+    pdpRate: safeDiv(b.pdpSessions, b.sessions),
     psr: safeDiv(b.projectStarted, b.pdpSessions),
     imageAddRate: safeDiv(b.imageAdded, b.projectStarted),
     addToCartRate: safeDiv(b.addedToCart, b.imageAdded),
@@ -170,6 +187,7 @@ function ratesFromBaseline(b: Baseline): Rates {
 
 function blendedRatesFromChain(c: ChainState): Rates {
   return {
+    pdpRate: safeDiv(c.product_viewed, c.sessions),
     psr: safeDiv(c.project_started, c.product_viewed),
     imageAddRate: safeDiv(c.image_added, c.project_started),
     addToCartRate: safeDiv(c.product_added, c.image_added),
@@ -180,6 +198,7 @@ function blendedRatesFromChain(c: ChainState): Rates {
 // ----------------------------- Assumptions / Sensitivity helpers -----------------------------
 
 const STEP_LABEL: Record<LiftStep, string> = {
+  Sessions: "Sessions",
   ProductViewed: "Product Viewed",
   ProjectStarted: "Project Started",
   ImageAdded: "Image Added",
@@ -188,6 +207,7 @@ const STEP_LABEL: Record<LiftStep, string> = {
 };
 
 const RATE_PLAIN: Record<RateKey, string> = {
+  pdpRate: "PDP rate",
   psr: "project start rate",
   imageAddRate: "image-add rate",
   addToCartRate: "add-to-cart rate",
@@ -195,6 +215,7 @@ const RATE_PLAIN: Record<RateKey, string> = {
 };
 
 function annualIncremental(
+  sessions: number,
   pdp: number,
   aov: number,
   rates: Rates,
@@ -203,8 +224,8 @@ function annualIncremental(
   downstream: Partial<Record<RateKey, number>> | undefined,
   safetyMult: number,
 ): number {
-  const base = computeChain(pdp, aov, rates, null, 1);
-  const lifted = computeChain(pdp, aov, rates, testStep, liftMult, downstream);
+  const base = computeChain(sessions, pdp, aov, rates, null, 1);
+  const lifted = computeChain(sessions, pdp, aov, rates, testStep, liftMult, downstream);
   return (lifted.revenue - base.revenue) * safetyMult * 12;
 }
 
@@ -239,6 +260,7 @@ function buildAssumptionsText(args: {
 type SensCandidate = { label: string; swing: number };
 
 function computeSensitivity(args: {
+  sessions: number;
   pdp: number;
   aov: number;
   rates: Rates;
@@ -248,7 +270,7 @@ function computeSensitivity(args: {
   safetyMult: number;
 }): SensCandidate[] {
   const base = annualIncremental(
-    args.pdp, args.aov, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult,
+    args.sessions, args.pdp, args.aov, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult,
   );
   if (!Number.isFinite(base) || args.liftMult === 1) return [];
   const candidates: SensCandidate[] = [];
@@ -258,33 +280,33 @@ function computeSensitivity(args: {
 
   // AOV ±5%
   {
-    const hi = annualIncremental(args.pdp, args.aov * 1.05, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
-    const lo = annualIncremental(args.pdp, args.aov * 0.95, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+    const hi = annualIncremental(args.sessions, args.pdp, args.aov * 1.05, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+    const lo = annualIncremental(args.sessions, args.pdp, args.aov * 0.95, args.rates, args.testStep, args.liftMult, args.downstream, args.safetyMult);
     candidates.push({ label: `AOV (±5% = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
   }
 
   // Lift size ±10% (relative on (liftMult - 1))
   {
     const delta = args.liftMult - 1;
-    const hi = annualIncremental(args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 1.1, args.downstream, args.safetyMult);
-    const lo = annualIncremental(args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 0.9, args.downstream, args.safetyMult);
+    const hi = annualIncremental(args.sessions, args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 1.1, args.downstream, args.safetyMult);
+    const lo = annualIncremental(args.sessions, args.pdp, args.aov, args.rates, args.testStep, 1 + delta * 0.9, args.downstream, args.safetyMult);
     candidates.push({ label: `lift size (±10% = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
   }
 
   // Rates: ±10% relative and ±0.3pp absolute
-  const rateKeys: RateKey[] = ["psr", "imageAddRate", "addToCartRate", "checkoutRate"];
+  const rateKeys: RateKey[] = ["pdpRate", "psr", "imageAddRate", "addToCartRate", "checkoutRate"];
   for (const k of rateKeys) {
     const cur = args.rates[k];
     if (!Number.isFinite(cur)) continue;
     {
-      const hi = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: cur * 1.1 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
-      const lo = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: cur * 0.9 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const hi = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: cur * 1.1 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const lo = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: cur * 0.9 }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
       candidates.push({ label: `baseline ${RATE_PLAIN[k]} (±10% = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
     }
     {
       const pp = 0.003;
-      const hi = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: cur + pp }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
-      const lo = annualIncremental(args.pdp, args.aov, { ...args.rates, [k]: Math.max(0, cur - pp) }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const hi = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: cur + pp }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
+      const lo = annualIncremental(args.sessions, args.pdp, args.aov, { ...args.rates, [k]: Math.max(0, cur - pp) }, args.testStep, args.liftMult, args.downstream, args.safetyMult);
       candidates.push({ label: `baseline ${RATE_PLAIN[k]} (±0.3pp = ±${fmtUsd(measure(hi, lo))} annualized)`, swing: measure(hi, lo) });
     }
   }
@@ -325,7 +347,7 @@ function Dashboard() {
 
   // Per-segment baseline rate overrides keyed by "device|productLine".
   // Resets each session so baseline always shows on load.
-  type RateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+  type RateKey = "pdpRate" | "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
   type SegmentOverrides = Partial<Record<RateKey, string>>;
   const [segmentRates, setSegmentRates] = useState<Record<string, SegmentOverrides>>({});
 
@@ -456,7 +478,7 @@ function Dashboard() {
 
   // Baseline NEVER reflects overrides — overrides only affect the "with lift" line.
   const aggregateBaselineChain = useMemo(
-    () => computeChain(baseline.pdpSessions, baseline.aov, aggregateDefaultRates, null, 1),
+    () => computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, aggregateDefaultRates, null, 1),
     [baseline, aggregateDefaultRates],
   );
 
@@ -481,7 +503,7 @@ function Dashboard() {
 
   const aggregateLiftedChain = useMemo<ChainState>(() => {
     if (liftMult === 1) return aggregateBaselineChain;
-    return computeChain(baseline.pdpSessions, baseline.aov, aggregateRates, testStep, liftMult, parsedDownstream);
+    return computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, aggregateRates, testStep, liftMult, parsedDownstream);
   }, [aggregateBaselineChain, aggregateRates, baseline, liftMult, testStep, parsedDownstream]);
 
   const aggIncrementalMonthly = (aggregateLiftedChain.revenue - aggregateBaselineChain.revenue) * safetyMult;
@@ -543,6 +565,7 @@ function Dashboard() {
     const rows: string[][] = [
       ["Test step", stepLabel, ""],
       ["Test lift %", `${liftPctNum}%`, ""],
+      ["Sessions", fmt(aggregateBaselineChain.sessions), fmt(aggregateLiftedChain.sessions)],
       ["Product Viewed", fmt(aggregateBaselineChain.product_viewed), fmt(aggregateLiftedChain.product_viewed)],
       ["Project Started", fmt(aggregateBaselineChain.project_started), fmt(aggregateLiftedChain.project_started)],
       ["Product Added", fmt(aggregateBaselineChain.product_added), fmt(aggregateLiftedChain.product_added)],
@@ -728,6 +751,7 @@ function Dashboard() {
                     aov={baseline.aov}
                     monthly={aggIncrementalMonthly}
                     annual={aggIncrementalAnnual}
+                    sessions={baseline.sessions}
                     pdp={baseline.pdpSessions}
                     rates={aggregateRates}
                     liftMult={liftMult}
@@ -965,6 +989,16 @@ function ChainView({
       <div className="flex flex-col items-stretch gap-2 p-4">
 
         <ChainNodeRow
+          label="Sessions"
+          baseline={baselineChain.sessions}
+          lifted={liftedChain.sessions}
+          isAffected={affectedStep === "Sessions"}
+          liftActive={liftActive}
+        />
+        <ChainArrow />
+        {renderRateRow("pdpRate", "PDP Rate", affectedStep === "ProductViewed")}
+        <ChainArrow />
+        <ChainNodeRow
           label="Product Viewed"
           baseline={baselineChain.product_viewed}
           lifted={liftedChain.product_viewed}
@@ -1063,6 +1097,7 @@ function AssumptionsPanel({
   aov,
   monthly,
   annual,
+  sessions,
   pdp,
   rates,
   liftMult,
@@ -1076,6 +1111,7 @@ function AssumptionsPanel({
   aov: number;
   monthly: number;
   annual: number;
+  sessions: number;
   pdp: number;
   rates: Rates;
   liftMult: number;
@@ -1083,7 +1119,7 @@ function AssumptionsPanel({
   safetyMult: number;
 }) {
   const text = buildAssumptionsText({ testStep, liftPct, trafficBase, overrides, aov, monthly, annual });
-  const sens = computeSensitivity({ pdp, aov, rates, testStep, liftMult, downstream, safetyMult });
+  const sens = computeSensitivity({ sessions, pdp, aov, rates, testStep, liftMult, downstream, safetyMult });
   const sensText = sensitivityLine(sens);
   const full = sensText ? `${text}\n\n${sensText}` : text;
 
@@ -1249,7 +1285,7 @@ function ValuePair({
 
 // ----------------------------- Segment Funnel -----------------------------
 
-type SegRateKey = "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
+type SegRateKey = "pdpRate" | "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
 type SegOverrides = Partial<Record<SegRateKey, string>>;
 
 function SegmentFunnel({
@@ -1293,14 +1329,15 @@ function SegmentFunnel({
   };
 
   const effectiveRates: Rates = {
+    pdpRate: rateOf("pdpRate"),
     psr: rateOf("psr"),
     imageAddRate: rateOf("imageAddRate"),
     addToCartRate: rateOf("addToCartRate"),
     checkoutRate: rateOf("checkoutRate"),
   };
 
-  const baselineChain = computeChain(baseline.pdpSessions, baseline.aov, defaultRates, null, 1);
-  const liftedChain = computeChain(baseline.pdpSessions, baseline.aov, effectiveRates, testStep, liftMult, downstreamOverrides);
+  const baselineChain = computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, defaultRates, null, 1);
+  const liftedChain = computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, effectiveRates, testStep, liftMult, downstreamOverrides);
   const isOver = (k: RateKey) => liftActive && !!overriddenSet?.has(k);
 
   const incrementalMonthly = (liftedChain.revenue - baselineChain.revenue) * safetyMult;
@@ -1338,6 +1375,27 @@ function SegmentFunnel({
         </div>
       </header>
       <div className="flex flex-col items-stretch gap-2 p-4">
+        <ChainNodeRow
+          label="Sessions"
+          baseline={baselineChain.sessions}
+          lifted={liftedChain.sessions}
+          isAffected={testStep === "Sessions"}
+          liftActive={liftActive}
+        />
+        <ChainArrow />
+        <SegEditableRateRow
+          label="PDP Rate"
+          rateKey="pdpRate"
+          defaultPct={defaultRates.pdpRate * 100}
+          value={overrides.pdpRate ?? ""}
+          onChangeInput={(v) => setOverride("pdpRate", v)}
+          baseline={baselineChain.rates.pdpRate}
+          lifted={liftedChain.rates.pdpRate}
+          isAffected={testStep === "ProductViewed"}
+          liftActive={liftActive}
+          isOverridden={isOver("pdpRate")}
+        />
+        <ChainArrow />
         <ChainNodeRow
           label="Product Viewed"
           baseline={baselineChain.product_viewed}
@@ -1471,6 +1529,7 @@ function SegmentFunnel({
           aov={baseline.aov}
           monthly={incrementalMonthly}
           annual={incrementalAnnual}
+          sessions={baseline.sessions}
           pdp={baseline.pdpSessions}
           rates={effectiveRates}
           liftMult={liftMult}
