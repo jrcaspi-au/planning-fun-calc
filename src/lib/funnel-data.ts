@@ -3,6 +3,7 @@ import Papa from "papaparse";
 export type SessionRow = {
   device: string;
   productLine: string;
+  sessions: number;
   pdpSessions: number;
   loginStarted: number;
   loginCompleted: number;
