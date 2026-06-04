@@ -422,7 +422,7 @@ function Dashboard() {
       defaultRates: Rates;
     }> = [];
     const matchDev = (d: string) =>
-      device === "All Devices" || d.toLowerCase() === device.toLowerCase();
+      device === ALL || d.toLowerCase() === device.toLowerCase();
     const matchVis = (v: string) =>
       visitorType === ALL || v.toLowerCase() === visitorType.toLowerCase();
     const matchBook = (b: string) =>
