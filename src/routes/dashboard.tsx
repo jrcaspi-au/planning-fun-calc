@@ -755,6 +755,27 @@ function Dashboard() {
             </div>
           )}
 
+          {sessionRows.length > 0 && (baseline.loginStarted > 0 || baseline.loginCompleted > 0) && (
+            <section className="mt-4 rounded-md border bg-card p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Session Attributes (off-funnel)
+              </h3>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-md border bg-muted/30 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Login Started</p>
+                  <p className="font-mono tabular-nums">{fmtInt(baseline.loginStarted)}</p>
+                </div>
+                <div className="rounded-md border bg-muted/30 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Login Completed</p>
+                  <p className="font-mono tabular-nums">{fmtInt(baseline.loginCompleted)}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Session attributes — not part of the rate chain. May legitimately exceed Product Viewed.
+              </p>
+            </section>
+          )}
+
           {/* Test Configuration panel */}
           <TestConfigPanel
             testStep={testStep}
@@ -762,6 +783,7 @@ function Dashboard() {
             testLift={testLift}
             setTestLift={setTestLift}
           />
+
 
 
           {mode === "aggregate" ? (
