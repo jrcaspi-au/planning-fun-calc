@@ -988,6 +988,16 @@ function ChainView({
       <div className="flex flex-col items-stretch gap-2 p-4">
 
         <ChainNodeRow
+          label="Sessions"
+          baseline={baselineChain.sessions}
+          lifted={liftedChain.sessions}
+          isAffected={affectedStep === "Sessions"}
+          liftActive={liftActive}
+        />
+        <ChainArrow />
+        {renderRateRow("pdpRate", "PDP Rate", affectedStep === "ProductViewed")}
+        <ChainArrow />
+        <ChainNodeRow
           label="Product Viewed"
           baseline={baselineChain.product_viewed}
           lifted={liftedChain.product_viewed}
