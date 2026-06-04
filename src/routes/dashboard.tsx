@@ -1085,6 +1085,7 @@ function AssumptionsPanel({
   aov,
   monthly,
   annual,
+  sessions,
   pdp,
   rates,
   liftMult,
@@ -1098,6 +1099,7 @@ function AssumptionsPanel({
   aov: number;
   monthly: number;
   annual: number;
+  sessions: number;
   pdp: number;
   rates: Rates;
   liftMult: number;
@@ -1105,7 +1107,7 @@ function AssumptionsPanel({
   safetyMult: number;
 }) {
   const text = buildAssumptionsText({ testStep, liftPct, trafficBase, overrides, aov, monthly, annual });
-  const sens = computeSensitivity({ pdp, aov, rates, testStep, liftMult, downstream, safetyMult });
+  const sens = computeSensitivity({ sessions, pdp, aov, rates, testStep, liftMult, downstream, safetyMult });
   const sensText = sensitivityLine(sens);
   const full = sensText ? `${text}\n\n${sensText}` : text;
 
