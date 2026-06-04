@@ -721,7 +721,7 @@ function Dashboard() {
             <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
               <TabsList>
                 <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
-                <TabsTrigger value="segmented">Segmented by Device × Product Line</TabsTrigger>
+                <TabsTrigger value="segmented">Segmented by Device × Visitor × Book</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
