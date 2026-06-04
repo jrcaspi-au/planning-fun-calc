@@ -561,14 +561,10 @@ function Dashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const safeDevice = device.replace(/\s+/g, "");
-    const safeProduct =
-      productLines.length === 0 || productLines.includes("All products")
-        ? "AllProducts"
-        : productLines.length === 1
-          ? productLines[0].replace(/\s+/g, "")
-          : `${productLines.length}Lines`;
+    const safeSeg = `${visitorType}_${bookGroup}`.replace(/\s+/g, "");
     link.href = url;
-    link.download = `scenario_${safeDevice}_${safeProduct}.csv`;
+    link.download = `scenario_${safeDevice}_${safeSeg}.csv`;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
