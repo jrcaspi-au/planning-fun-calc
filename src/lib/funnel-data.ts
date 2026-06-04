@@ -172,6 +172,7 @@ export function computeBaseline(
 
   const sum = sessions.reduce(
     (acc, r) => ({
+      sessions: acc.sessions + r.sessions,
       pdpSessions: acc.pdpSessions + r.pdpSessions,
       loginStarted: acc.loginStarted + r.loginStarted,
       loginCompleted: acc.loginCompleted + r.loginCompleted,
@@ -181,7 +182,7 @@ export function computeBaseline(
       addedToCart: acc.addedToCart + r.addedToCart,
       orders: acc.orders + r.orders,
     }),
-    { pdpSessions: 0, loginStarted: 0, loginCompleted: 0, alreadyAuthenticated: 0, projectStarted: 0, imageAdded: 0, addedToCart: 0, orders: 0 },
+    { sessions: 0, pdpSessions: 0, loginStarted: 0, loginCompleted: 0, alreadyAuthenticated: 0, projectStarted: 0, imageAdded: 0, addedToCart: 0, orders: 0 },
   );
 
   const aovOrderTotal = aovs.reduce((a, r) => a + r.orders, 0);
