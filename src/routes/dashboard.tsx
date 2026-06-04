@@ -478,7 +478,7 @@ function Dashboard() {
 
   // Baseline NEVER reflects overrides — overrides only affect the "with lift" line.
   const aggregateBaselineChain = useMemo(
-    () => computeChain(baseline.pdpSessions, baseline.aov, aggregateDefaultRates, null, 1),
+    () => computeChain(baseline.sessions, baseline.pdpSessions, baseline.aov, aggregateDefaultRates, null, 1),
     [baseline, aggregateDefaultRates],
   );
 
