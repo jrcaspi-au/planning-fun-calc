@@ -324,7 +324,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const [authReady, setAuthReady] = useState(false);
 
-  const [device, setDevice] = useState<string>("All Devices");
+  const [device, setDevice] = useState<string>(ALL);
   const [visitorType, setVisitorType] = useState<string>(ALL);
   const [bookGroup, setBookGroup] = useState<string>(ALL);
   const [safetyMargin, setSafetyMargin] = useState<string>("75");
@@ -422,7 +422,7 @@ function Dashboard() {
       defaultRates: Rates;
     }> = [];
     const matchDev = (d: string) =>
-      device === "All Devices" || d.toLowerCase() === device.toLowerCase();
+      device === ALL || d.toLowerCase() === device.toLowerCase();
     const matchVis = (v: string) =>
       visitorType === ALL || v.toLowerCase() === visitorType.toLowerCase();
     const matchBook = (b: string) =>
@@ -639,8 +639,8 @@ function Dashboard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {["All Devices", "Desktop", "Mobile", "Tablet"].map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  {[ALL, "Desktop", "Mobile", "Tablet"].map((d) => (
+                    <SelectItem key={d} value={d}>{d === ALL ? "All Devices" : d}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
