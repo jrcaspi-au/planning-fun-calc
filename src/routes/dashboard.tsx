@@ -1486,7 +1486,9 @@ function SegmentFunnel({
           lifted={liftedChain.image_added}
           isAffected={testStep === "ImageAdded"}
           liftActive={liftActive}
+          badge="est."
         />
+
         <ChainArrow />
         <SegEditableRateRow
           label="Add to Cart Rate"
