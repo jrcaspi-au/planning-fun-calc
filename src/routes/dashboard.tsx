@@ -244,8 +244,16 @@ function buildAssumptionsText(args: {
   lines.push(`AOV: ${fmtUsd(args.aov)}`);
   lines.push(`Monthly incremental revenue: ${fmtUsd(args.monthly)}`);
   lines.push(`Annualized: ${fmtUsd(args.annual)}`);
+  lines.push("");
+  lines.push("Notes:");
+  lines.push("- Steps are independent, session-deduped populations; rates are descriptive ratios, not per-user conversion.");
+  lines.push("- A step lift propagates to revenue through held-constant downstream ratios (approximation, may overstate flow-through).");
+  lines.push("- Visitor Type = first-visit (session_number = 1), not first-purchase.");
+  lines.push("- Book order = highest-revenue line item is a book.");
+  lines.push("- Image Added is directional only (estimated from a keyless raw event).");
   return lines.join("\n");
 }
+
 
 type SensCandidate = { label: string; swing: number };
 
