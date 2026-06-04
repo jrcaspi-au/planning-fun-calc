@@ -365,6 +365,9 @@ function Dashboard() {
 
   const [sessionOk, setSessionOk] = useState(false);
   const [aovOk, setAovOk] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [aovError, setAovError] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!isAuthenticated()) navigate({ to: "/" });
