@@ -1375,6 +1375,27 @@ function SegmentFunnel({
       </header>
       <div className="flex flex-col items-stretch gap-2 p-4">
         <ChainNodeRow
+          label="Sessions"
+          baseline={baselineChain.sessions}
+          lifted={liftedChain.sessions}
+          isAffected={testStep === "Sessions"}
+          liftActive={liftActive}
+        />
+        <ChainArrow />
+        <SegEditableRateRow
+          label="PDP Rate"
+          rateKey="pdpRate"
+          defaultPct={defaultRates.pdpRate * 100}
+          value={overrides.pdpRate ?? ""}
+          onChangeInput={(v) => setOverride("pdpRate", v)}
+          baseline={baselineChain.rates.pdpRate}
+          lifted={liftedChain.rates.pdpRate}
+          isAffected={testStep === "ProductViewed"}
+          liftActive={liftActive}
+          isOverridden={isOver("pdpRate")}
+        />
+        <ChainArrow />
+        <ChainNodeRow
           label="Product Viewed"
           baseline={baselineChain.product_viewed}
           lifted={liftedChain.product_viewed}
