@@ -1196,6 +1196,7 @@ function ChainNodeRow({
   kind = "volume",
   highlight,
   muted,
+  badge,
 }: {
   label: string;
   baseline: number;
@@ -1205,6 +1206,7 @@ function ChainNodeRow({
   kind?: "volume" | "currency";
   highlight?: boolean;
   muted?: boolean;
+  badge?: string;
 }) {
   const fmt = kind === "currency" ? fmtUsd : fmtInt;
   return (
@@ -1218,6 +1220,11 @@ function ChainNodeRow({
     >
       <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
+        {badge && (
+          <span className="ml-2 rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            {badge}
+          </span>
+        )}
         {isAffected && (
           <span className="ml-2 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
             LIFT
@@ -1232,6 +1239,7 @@ function ChainNodeRow({
     </div>
   );
 }
+
 
 function ChainEdgeRow({
   label,
