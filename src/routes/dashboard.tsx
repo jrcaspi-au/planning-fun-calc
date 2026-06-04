@@ -43,19 +43,10 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-const PRODUCT_LINES = [
-  "All products",
-  "everyday photo books",
-  "wedding layflat photo albums",
-  "baby board book",
-  "layflat photo albums",
-  "hardcover photo books",
-  "photo-wrapped hardcover",
-  "signature layflat",
-  "wedding guest books",
-];
-
 const DEVICES = ["Desktop", "Mobile", "Tablet"] as const;
+const VISITOR_TYPES = [ALL, "New", "Returning"] as const;
+const BOOK_GROUPS = [ALL, "Books", "Non-Books"] as const;
+
 
 // Funnel chain steps available to lift. The label identifies the node whose
 // inbound rate is lifted (Product Viewed lifts the input volume itself).
