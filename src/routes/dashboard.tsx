@@ -126,6 +126,7 @@ type ChainState = {
 };
 
 function computeChain(
+  sessions: number,
   pdpSessions: number,
   aov: number,
   rates: Rates,
@@ -134,9 +135,10 @@ function computeChain(
   downstreamOverrides?: Partial<Record<RateKey, number>>,
 ): ChainState {
   const r = { ...rates };
-  let product_viewed = pdpSessions;
+  let sessionsVal = sessions;
   if (liftStep && liftMult !== 1) {
-    if (liftStep === "ProductViewed") product_viewed *= liftMult;
+    if (liftStep === "Sessions") sessionsVal *= liftMult;
+    else if (liftStep === "ProductViewed") r.pdpRate *= liftMult;
     else if (liftStep === "ProjectStarted") r.psr *= liftMult;
     else if (liftStep === "ImageAdded") r.imageAddRate *= liftMult;
     else if (liftStep === "ProductAdded") r.addToCartRate *= liftMult;
@@ -150,12 +152,19 @@ function computeChain(
       if (v !== undefined && Number.isFinite(v)) r[k] = v;
     }
   }
+  // Sessions data may not be available yet; when missing, fall back to
+  // pdpSessions as the top of the funnel and surface "—" for Sessions / PDP Rate.
+  const hasSessionsData = sessionsVal > 0 && Number.isFinite(r.pdpRate) && r.pdpRate > 0;
+  const product_viewed = hasSessionsData ? sessionsVal * r.pdpRate : pdpSessions;
+  const sessionsOut = hasSessionsData ? sessionsVal : NaN;
+  if (!hasSessionsData) r.pdpRate = NaN;
   const project_started = product_viewed * r.psr;
   const image_added = project_started * r.imageAddRate;
   const product_added = image_added * r.addToCartRate;
   const order_completed = product_added * r.checkoutRate;
   const revenue = order_completed * aov;
   return {
+    sessions: sessionsOut,
     product_viewed,
     project_started,
     image_added,
@@ -168,6 +177,7 @@ function computeChain(
 
 function ratesFromBaseline(b: Baseline): Rates {
   return {
+    pdpRate: safeDiv(b.pdpSessions, b.sessions),
     psr: safeDiv(b.projectStarted, b.pdpSessions),
     imageAddRate: safeDiv(b.imageAdded, b.projectStarted),
     addToCartRate: safeDiv(b.addedToCart, b.imageAdded),
@@ -177,6 +187,7 @@ function ratesFromBaseline(b: Baseline): Rates {
 
 function blendedRatesFromChain(c: ChainState): Rates {
   return {
+    pdpRate: safeDiv(c.product_viewed, c.sessions),
     psr: safeDiv(c.project_started, c.product_viewed),
     imageAddRate: safeDiv(c.image_added, c.project_started),
     addToCartRate: safeDiv(c.product_added, c.image_added),
@@ -187,6 +198,7 @@ function blendedRatesFromChain(c: ChainState): Rates {
 // ----------------------------- Assumptions / Sensitivity helpers -----------------------------
 
 const STEP_LABEL: Record<LiftStep, string> = {
+  Sessions: "Sessions",
   ProductViewed: "Product Viewed",
   ProjectStarted: "Project Started",
   ImageAdded: "Image Added",
@@ -195,6 +207,7 @@ const STEP_LABEL: Record<LiftStep, string> = {
 };
 
 const RATE_PLAIN: Record<RateKey, string> = {
+  pdpRate: "PDP rate",
   psr: "project start rate",
   imageAddRate: "image-add rate",
   addToCartRate: "add-to-cart rate",
