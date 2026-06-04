@@ -11,9 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown } from "lucide-react";
+
+
 import { isAuthenticated, logout } from "@/lib/auth";
 import {
   type SessionRow,
@@ -25,14 +24,14 @@ import {
   safeDiv,
   parseSessionCsv,
   parseAovCsv,
+  ALL,
 } from "@/lib/funnel-data";
-import sessionCsvRaw from "@/data/session_level.csv?raw";
 import aovCsvRaw from "@/data/aov_data.csv?raw";
 import { toast } from "sonner";
-import { Check, Upload, Download, Loader2, ArrowDown } from "lucide-react";
+import { Check, Upload, Download, Loader2, ArrowDown, AlertTriangle } from "lucide-react";
 import { Fragment } from "react";
-import { HelpCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -44,19 +43,10 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-const PRODUCT_LINES = [
-  "All products",
-  "everyday photo books",
-  "wedding layflat photo albums",
-  "baby board book",
-  "layflat photo albums",
-  "hardcover photo books",
-  "photo-wrapped hardcover",
-  "signature layflat",
-  "wedding guest books",
-];
-
 const DEVICES = ["Desktop", "Mobile", "Tablet"] as const;
+const VISITOR_TYPES = [ALL, "New", "Returning"] as const;
+const BOOK_GROUPS = [ALL, "Books", "Non-Books"] as const;
+
 
 // Funnel chain steps available to lift. The label identifies the node whose
 // inbound rate is lifted (Product Viewed lifts the input volume itself).
@@ -254,8 +244,16 @@ function buildAssumptionsText(args: {
   lines.push(`AOV: ${fmtUsd(args.aov)}`);
   lines.push(`Monthly incremental revenue: ${fmtUsd(args.monthly)}`);
   lines.push(`Annualized: ${fmtUsd(args.annual)}`);
+  lines.push("");
+  lines.push("Notes:");
+  lines.push("- Steps are independent, session-deduped populations; rates are descriptive ratios, not per-user conversion.");
+  lines.push("- A step lift propagates to revenue through held-constant downstream ratios (approximation, may overstate flow-through).");
+  lines.push("- Visitor Type = first-visit (session_number = 1), not first-purchase.");
+  lines.push("- Book order = highest-revenue line item is a book.");
+  lines.push("- Image Added is directional only (estimated from a keyless raw event).");
   return lines.join("\n");
 }
+
 
 type SensCandidate = { label: string; swing: number };
 
@@ -326,8 +324,9 @@ function Dashboard() {
   const navigate = useNavigate();
   const [authReady, setAuthReady] = useState(false);
 
-  const [device, setDevice] = useState("All Devices");
-  const [productLines, setProductLines] = useState<string[]>([PRODUCT_LINES[0]]);
+  const [device, setDevice] = useState<string>("All Devices");
+  const [visitorType, setVisitorType] = useState<string>(ALL);
+  const [bookGroup, setBookGroup] = useState<string>(ALL);
   const [safetyMargin, setSafetyMargin] = useState<string>("75");
 
   type Mode = "aggregate" | "segmented";
@@ -345,7 +344,7 @@ function Dashboard() {
   const [testLift, setTestLift] = useState<string>("");
 
 
-  // Per-segment baseline rate overrides keyed by "device|productLine".
+  // Per-segment baseline rate overrides keyed by "device|visitor|book".
   // Resets each session so baseline always shows on load.
   type RateKey = "pdpRate" | "psr" | "imageAddRate" | "addToCartRate" | "checkoutRate";
   type SegmentOverrides = Partial<Record<RateKey, string>>;
@@ -385,15 +384,10 @@ function Dashboard() {
           typeof window !== "undefined"
             ? localStorage.getItem("funnel.aovCsv")
             : null;
-        const sessionText = storedSession ?? sessionCsvRaw;
         const aovText = storedAov ?? aovCsvRaw;
-        const [s, a] = await Promise.all([
-          Promise.resolve(parseSessionCsv(sessionText)),
-          Promise.resolve(parseAovCsv(aovText)),
-        ]);
+        const s = storedSession ? parseSessionCsv(storedSession) : [];
+        const a = parseAovCsv(aovText);
         if (cancelled) return;
-        if (!s.length) throw new Error("Session data is empty");
-        if (!a.length) throw new Error("AOV data is empty");
         setSessionRows(s);
         setAovRows(a);
         setDataError(null);
@@ -410,47 +404,42 @@ function Dashboard() {
   }, []);
 
   const baseline = useMemo(
-    () => computeBaseline(sessionRows, aovRows, device, productLines),
-    [sessionRows, aovRows, device, productLines],
+    () => computeBaseline(sessionRows, aovRows, device, visitorType, bookGroup),
+    [sessionRows, aovRows, device, visitorType, bookGroup],
   );
 
-  const SEGMENT_PRODUCTS = useMemo(
-    () => PRODUCT_LINES.filter((p) => p !== "All products"),
-    [],
-  );
-
-  // Build available segments (device × product) that have data, filtered by
-  // the left-hand Device / Product Line inputs.
+  // Build available segments (one per row in CSV) filtered by the current selectors.
   const segments = useMemo(() => {
     const list: Array<{
       key: string;
       device: string;
-      productLine: string;
+      visitorType: string;
+      bookGroup: string;
       baseline: Baseline;
       defaultRates: Rates;
     }> = [];
-    const devicesToShow =
-      device === "All Devices" ? (DEVICES as readonly string[]) : [device];
-    const allProducts =
-      productLines.length === 0 || productLines.includes("All products");
-    const productsToShow = allProducts
-      ? SEGMENT_PRODUCTS
-      : SEGMENT_PRODUCTS.filter((p) => productLines.includes(p));
-    for (const d of devicesToShow) {
-      for (const p of productsToShow) {
-        const b = computeBaseline(sessionRows, aovRows, d, [p]);
-        if (!b.pdpSessions) continue;
-        list.push({
-          key: `${d}|${p}`,
-          device: d,
-          productLine: p,
-          baseline: b,
-          defaultRates: ratesFromBaseline(b),
-        });
-      }
+    const matchDev = (d: string) =>
+      device === "All Devices" || d.toLowerCase() === device.toLowerCase();
+    const matchVis = (v: string) =>
+      visitorType === ALL || v.toLowerCase() === visitorType.toLowerCase();
+    const matchBook = (b: string) =>
+      bookGroup === ALL || b.toLowerCase() === bookGroup.toLowerCase();
+    for (const r of sessionRows) {
+      if (!matchDev(r.device) || !matchVis(r.visitorType) || !matchBook(r.bookGroup)) continue;
+      const b = computeBaseline(sessionRows, aovRows, r.device, r.visitorType, r.bookGroup);
+      if (!b.pdpSessions && !b.sessions) continue;
+      list.push({
+        key: `${r.device}|${r.visitorType}|${r.bookGroup}`,
+        device: r.device,
+        visitorType: r.visitorType,
+        bookGroup: r.bookGroup,
+        baseline: b,
+        defaultRates: ratesFromBaseline(b),
+      });
     }
     return list;
-  }, [sessionRows, aovRows, SEGMENT_PRODUCTS, device, productLines]);
+  }, [sessionRows, aovRows, device, visitorType, bookGroup]);
+
 
   const liftMult = useMemo(() => {
     const n = parseFloat(testLift);
@@ -509,7 +498,19 @@ function Dashboard() {
   const aggIncrementalMonthly = (aggregateLiftedChain.revenue - aggregateBaselineChain.revenue) * safetyMult;
   const aggIncrementalAnnual = aggIncrementalMonthly * 12;
 
+  // Validate that no in-funnel rate exceeds 100%. Login is off-funnel so excluded.
+  const rateBreaches = useMemo(() => {
+    const r = aggregateDefaultRates;
+    const checks: Array<{ key: RateKey; pct: number }> = [];
+    (["pdpRate", "psr", "imageAddRate", "addToCartRate", "checkoutRate"] as RateKey[]).forEach((k) => {
+      const v = r[k];
+      if (Number.isFinite(v) && v > 1) checks.push({ key: k, pct: v * 100 });
+    });
+    return checks;
+  }, [aggregateDefaultRates]);
+
   if (!authReady) return null;
+
 
   if (dataLoading) {
     return (
@@ -580,14 +581,10 @@ function Dashboard() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const safeDevice = device.replace(/\s+/g, "");
-    const safeProduct =
-      productLines.length === 0 || productLines.includes("All products")
-        ? "AllProducts"
-        : productLines.length === 1
-          ? productLines[0].replace(/\s+/g, "")
-          : `${productLines.length}Lines`;
+    const safeSeg = `${visitorType}_${bookGroup}`.replace(/\s+/g, "");
     link.href = url;
-    link.download = `scenario_${safeDevice}_${safeProduct}.csv`;
+    link.download = `scenario_${safeDevice}_${safeSeg}.csv`;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -643,12 +640,31 @@ function Dashboard() {
             </div>
 
             <div className="space-y-2">
-              <Label>Product Line</Label>
-              <ProductLineMultiSelect
-                options={PRODUCT_LINES}
-                value={productLines}
-                onChange={setProductLines}
-              />
+              <Label>Visitor Type</Label>
+              <Select value={visitorType} onValueChange={setVisitorType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VISITOR_TYPES.map((v) => (
+                    <SelectItem key={v} value={v}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Book Group</Label>
+              <Select value={bookGroup} onValueChange={setBookGroup}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BOOK_GROUPS.map((b) => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -689,7 +705,7 @@ function Dashboard() {
             <div className="mt-4 space-y-4">
               <FileDrop
                 id="session-upload"
-                label="Update Session Data (CSV)"
+                label="Upload Segmented Session CSV"
                 ok={sessionOk}
                 onFile={(f) => handleUpload(f, "session")}
               />
@@ -701,6 +717,7 @@ function Dashboard() {
               />
             </div>
           </div>
+
         </aside>
 
         {/* OUTPUTS */}
@@ -712,10 +729,52 @@ function Dashboard() {
             <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
               <TabsList>
                 <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
-                <TabsTrigger value="segmented">Segmented by Device × Product Line</TabsTrigger>
+                <TabsTrigger value="segmented">Segmented by Device × Visitor × Book</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
+
+          {sessionRows.length === 0 && (
+            <div className="mt-6 rounded-md border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+              Upload a segmented session CSV to populate the funnel.
+              <div className="mt-1 text-xs">
+                Expected columns: DEVICE_SEGMENT, VISITOR_TYPE, BOOK_GROUP, AVG_MONTHLY_TOTAL_SESSIONS, AVG_MONTHLY_PRODUCT_VIEWED, AVG_MONTHLY_LOGIN_STARTED, AVG_MONTHLY_LOGIN_COMPLETED, AVG_MONTHLY_PROJECT_STARTED, AVG_MONTHLY_IMAGE_ADDED, AVG_MONTHLY_PRODUCT_ADDED, AVG_MONTHLY_ORDER_COMPLETED.
+              </div>
+            </div>
+          )}
+
+          {rateBreaches.length > 0 && (
+            <div className="mt-6 flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-semibold">Data looks like raw event counts, not session-deduped — re-run the source query.</p>
+                <p className="mt-1 text-xs opacity-90">
+                  These rates exceed 100%: {rateBreaches.map((b) => `${RATE_LABEL[b.key]} ${b.pct.toFixed(1)}%`).join(", ")}.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {sessionRows.length > 0 && (baseline.loginStarted > 0 || baseline.loginCompleted > 0) && (
+            <section className="mt-4 rounded-md border bg-card p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Session Attributes (off-funnel)
+              </h3>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-md border bg-muted/30 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Login Started</p>
+                  <p className="font-mono tabular-nums">{fmtInt(baseline.loginStarted)}</p>
+                </div>
+                <div className="rounded-md border bg-muted/30 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Login Completed</p>
+                  <p className="font-mono tabular-nums">{fmtInt(baseline.loginCompleted)}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Session attributes — not part of the rate chain. May legitimately exceed Product Viewed.
+              </p>
+            </section>
+          )}
 
           {/* Test Configuration panel */}
           <TestConfigPanel
@@ -724,6 +783,8 @@ function Dashboard() {
             testLift={testLift}
             setTestLift={setTestLift}
           />
+
+
 
           {mode === "aggregate" ? (
             <div className="mt-6">
@@ -778,7 +839,7 @@ function Dashboard() {
             <div className="mt-6 space-y-6">
               {segments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No segments with data for the selected Device / Product Line filters.
+                  No segments with data for the selected filters.
                 </p>
               ) : (
                 segments.map((seg) => (
@@ -786,7 +847,8 @@ function Dashboard() {
                     key={seg.key}
                     segmentKey={seg.key}
                     device={seg.device}
-                    productLine={seg.productLine}
+                    productLine={`${seg.visitorType} · ${seg.bookGroup}`}
+
                     baseline={seg.baseline}
                     defaultRates={seg.defaultRates}
                     overrides={segmentRates[seg.key] ?? {}}
@@ -1024,7 +1086,9 @@ function ChainView({
           lifted={liftedChain.image_added}
           isAffected={affectedStep === "ImageAdded"}
           liftActive={liftActive}
+          badge="est."
         />
+
         <ChainArrow />
         {renderRateRow("addToCartRate", "Add to Cart Rate", affectedStep === "ProductAdded")}
         <ChainArrow />
@@ -1164,6 +1228,7 @@ function ChainNodeRow({
   kind = "volume",
   highlight,
   muted,
+  badge,
 }: {
   label: string;
   baseline: number;
@@ -1173,6 +1238,7 @@ function ChainNodeRow({
   kind?: "volume" | "currency";
   highlight?: boolean;
   muted?: boolean;
+  badge?: string;
 }) {
   const fmt = kind === "currency" ? fmtUsd : fmtInt;
   return (
@@ -1186,6 +1252,11 @@ function ChainNodeRow({
     >
       <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
+        {badge && (
+          <span className="ml-2 rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+            {badge}
+          </span>
+        )}
         {isAffected && (
           <span className="ml-2 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
             LIFT
@@ -1200,6 +1271,7 @@ function ChainNodeRow({
     </div>
   );
 }
+
 
 function ChainEdgeRow({
   label,
@@ -1444,7 +1516,9 @@ function SegmentFunnel({
           lifted={liftedChain.image_added}
           isAffected={testStep === "ImageAdded"}
           liftActive={liftActive}
+          badge="est."
         />
+
         <ChainArrow />
         <SegEditableRateRow
           label="Add to Cart Rate"
@@ -1675,58 +1749,5 @@ function FileDrop({
   );
 }
 
-function ProductLineMultiSelect({
-  options,
-  value,
-  onChange,
-}: {
-  options: string[];
-  value: string[];
-  onChange: (next: string[]) => void;
-}) {
-  const ALL = "All products";
-  const toggle = (opt: string, checked: boolean) => {
-    if (opt === ALL) {
-      onChange(checked ? [ALL] : []);
-      return;
-    }
-    const without = value.filter((v) => v !== ALL && v !== opt);
-    const next = checked ? [...without, opt] : without;
-    onChange(next.length === 0 ? [ALL] : next);
-  };
-  const label =
-    value.length === 0 || value.includes(ALL)
-      ? ALL
-      : value.length === 1
-        ? value[0]
-        : `${value.length} selected`;
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-between font-normal">
-          <span className="truncate">{label}</span>
-          <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-2" align="start">
-        <div className="max-h-72 overflow-auto">
-          {options.map((opt) => {
-            const checked =
-              opt === ALL
-                ? value.length === 0 || value.includes(ALL)
-                : value.includes(opt);
-            return (
-              <label
-                key={opt}
-                className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
-              >
-                <Checkbox checked={checked} onCheckedChange={(c) => toggle(opt, c === true)} />
-                <span className="truncate">{opt}</span>
-              </label>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
+
+
