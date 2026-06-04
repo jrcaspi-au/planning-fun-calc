@@ -1056,7 +1056,9 @@ function ChainView({
           lifted={liftedChain.image_added}
           isAffected={affectedStep === "ImageAdded"}
           liftActive={liftActive}
+          badge="est."
         />
+
         <ChainArrow />
         {renderRateRow("addToCartRate", "Add to Cart Rate", affectedStep === "ProductAdded")}
         <ChainArrow />
