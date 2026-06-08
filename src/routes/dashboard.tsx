@@ -27,6 +27,7 @@ import {
   parseAovCsv,
   ALL,
 } from "@/lib/funnel-data";
+import sessionCsvRaw from "@/data/session_level.csv?raw";
 import aovCsvRaw from "@/data/aov_data.csv?raw";
 import { toast } from "sonner";
 import { Check, Upload, Download, Loader2, ArrowDown, AlertTriangle } from "lucide-react";
@@ -408,7 +409,7 @@ function Dashboard() {
             ? localStorage.getItem("funnel.aovCsv")
             : null;
 
-        const sessionText = remoteSession ?? localSession;
+        const sessionText = remoteSession ?? localSession ?? sessionCsvRaw;
         const aovText = remoteAov ?? localAov ?? aovCsvRaw;
 
         const s = sessionText ? parseSessionCsv(sessionText) : [];
