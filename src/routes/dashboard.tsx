@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 
 import { isAuthenticated, logout } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   type SessionRow,
   type AovRow,
