@@ -571,6 +571,10 @@ function Dashboard() {
         // Replace existing rows with the freshly parsed set.
         setSessionRows(rows);
         try { localStorage.setItem("funnel.sessionCsv", text); } catch {}
+        const { error: upErr } = await supabase
+          .from("shared_csv")
+          .upsert({ key: "session", content: text, updated_at: new Date().toISOString() });
+        if (upErr) throw new Error(`Saved locally, but cloud sync failed: ${upErr.message}`);
         setSessionError(null);
         setSessionOk(true);
         console.log(`[funnel] Session CSV loaded: ${rows.length} rows`);
@@ -581,6 +585,10 @@ function Dashboard() {
         if (!rows.length) throw new Error("AOV data is empty.");
         setAovRows(rows);
         try { localStorage.setItem("funnel.aovCsv", text); } catch {}
+        const { error: upErr } = await supabase
+          .from("shared_csv")
+          .upsert({ key: "aov", content: text, updated_at: new Date().toISOString() });
+        if (upErr) throw new Error(`Saved locally, but cloud sync failed: ${upErr.message}`);
         setAovError(null);
         setAovOk(true);
         console.log(`[funnel] AOV CSV loaded: ${rows.length} rows`);
