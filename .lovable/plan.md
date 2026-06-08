@@ -1,31 +1,31 @@
-## Problem
+## Deliverable
 
-When a CSV is uploaded, the calculator displays zeros across the board even though rows are parsed successfully.
+A single Markdown file, `Planning-Funnel-Calculator-Confluence.md`, written to `/mnt/documents/` and surfaced as a downloadable artifact. The file is formatted for Confluence's "Insert → Markdown" macro: standard headings, bullet lists, tables, fenced code blocks for formulas, and block quotes for callouts — no app-specific HTML.
 
-Root cause: a mismatch between the Device dropdown's "all" value and the sentinel `computeBaseline` checks for.
+## Article structure
 
-- `src/routes/dashboard.tsx` initializes `device` with the string `"All Devices"` and the select options are `["All Devices", "Desktop", "Mobile", "Tablet"]`.
-- `src/lib/funnel-data.ts` exports `ALL = "All"`, and `computeBaseline` only skips device filtering when `device === ALL`. Otherwise it does `eq(row.device, device)`, comparing `"Desktop"` (etc.) against `"All Devices"` — which never matches.
-- Result: `filtered` is empty → sessions, PDP, project started, orders, AOV all aggregate to 0.
+1. **Overview** — one-paragraph summary of what the calculator is, who it's for, and how to read the rest of the doc.
+2. **Calculator Dynamics** (new content, derived from `src/routes/dashboard.tsx`)
+   - **Mental model**: baseline funnel → choose a lift step → apply % lift → propagate downstream → multiply by AOV → apply safety margin → annualize.
+   - **The core formula**, as a fenced block:
+     ```
+     incremental_monthly_revenue =
+       (lifted_orders − baseline_orders) × AOV × safety_margin
+     annual_incremental_revenue = incremental_monthly_revenue × 12
+     ```
+   - **Lift steps** table: Sessions, Product Viewed, Project Started, Image Added, Product Added, Order Completed — and what each lift multiplies (input volume vs. the step's inbound rate).
+   - **Downstream behavior toggle**: "hold baseline rates constant" vs. "override downstream rates" and when to use each.
+   - **Safety margin**: what the % means (haircut on incremental revenue), default 75%, why it exists.
+   - **Segments**: Device × Visitor Type × Book Group select the baseline rates used in the chain.
+   - **Sensitivity callouts**: how the app stress-tests AOV ±5%, lift size ±10%, and baseline rates ±10% / ±0.3pp — included so readers understand what drives swings.
+3. **README — Funnel Definitions** (mirrors `src/routes/readme.tsx`)
+   - What the calculator is, trailing-12-month window, funnel step definitions (one bullet each), single-session rule, the three segments (Device, Book Group, Visitor Type) with the New-vs-Returning order callout as a block quote, order exclusions, key limitations.
+4. **AOV README** (mirrors `src/routes/aov-readme.tsx`)
+   - What AOV represents, calculation (net revenue ÷ distinct orders per device × product line), trailing-12-month window, inclusion rules, device attribution, session-attribution limitation.
+5. **Glossary** — short table of terms (Sessions, PDP rate, PSR, Image Add rate, Add-to-Cart rate, Checkout rate, AOV, Safety margin, Lift).
 
-Visitor Type and Book Group don't have this bug because they're initialized with the real `ALL` constant.
+## Notes
 
-## Fix
-
-Single, small change in `src/routes/dashboard.tsx`:
-
-1. Use the `ALL` sentinel for the Device state too.
-   - `useState<string>(ALL)` instead of `useState<string>("All Devices")`.
-   - Select options become `[ALL, "Desktop", "Mobile", "Tablet"]` (label can still read "All Devices" via a conditional on the SelectItem children if we want to preserve the visible label).
-2. Update the two other spots that compare against the literal `"All Devices"`:
-   - The segments builder around line 425 (`device === "All Devices" || ...`) → `device === ALL || ...`.
-   - The CSV filename builder around line 590 — keep it working with whatever the value is (it's just `replace(/\s+/g, "")`, so `"All"` is fine).
-
-No changes to lift logic, safety margin, AOV math, parser, or layout.
-
-## Verification
-
-- Upload the 8-row CSV; confirm Sessions, Product Viewed, Project Started, etc. populate for the default "All" selection.
-- Switch Device to Desktop/Mobile/Tablet and confirm numbers change accordingly.
-- Switch Visitor Type and Book Group and confirm filtering still works.
-- Confirm Segmented tab still lists segments.
+- Content is documentation only; no code in the app changes.
+- Wording for README / AOV sections is taken verbatim (or lightly re-flowed for Markdown) from the in-app pages so the Confluence article and the app stay consistent.
+- Output will be delivered via a `<presentation-artifact>` tag so you can preview/download the `.md` directly.
