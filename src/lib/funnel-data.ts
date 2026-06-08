@@ -72,65 +72,69 @@ function normDevice(v: string): string {
 export function parseSessionCsv(text: string): SessionRow[] {
   const rows = parseWithPapa(text);
   return rows
-    .map((r) => ({
-      device: normDevice(
-        pick(r, ["device_segment", "device", "device_category", "devicecategory"]),
-      ),
-      visitorType: normVisitor(
-        pick(r, ["visitor_type", "visitortype", "visitor"]),
-      ),
-      bookGroup: normBook(
-        pick(r, ["book_group", "bookgroup", "book"]),
-      ),
-      sessions: num(
-        pick(r, [
-          "avg_monthly_total_sessions",
-          "total_sessions",
-          "sessions",
-        ]),
-      ),
-      pdpSessions: num(
+    .map((r) => {
+      const pdpSessions = num(
         pick(r, [
           "avg_monthly_product_viewed",
           "product_viewed",
           "pdp_sessions",
         ]),
-      ),
-      loginStarted: num(
+      );
+      const sessions = num(
         pick(r, [
-          "avg_monthly_login_started",
-          "avg_monthly_log_in_started",
-          "login_started",
+          "avg_monthly_total_sessions",
+          "total_sessions",
+          "sessions",
         ]),
-      ),
-      loginCompleted: num(
-        pick(r, [
-          "avg_monthly_login_completed",
-          "avg_monthly_log_in_completed",
-          "login_completed",
-        ]),
-      ),
-      projectStarted: num(
-        pick(r, ["avg_monthly_project_started", "project_started"]),
-      ),
-      imageAdded: num(
-        pick(r, ["avg_monthly_image_added", "image_added"]),
-      ),
-      addedToCart: num(
-        pick(r, [
-          "avg_monthly_product_added",
-          "product_added",
-          "added_to_cart",
-        ]),
-      ),
-      orders: num(
-        pick(r, [
-          "avg_monthly_order_completed",
-          "order_completed",
-          "orders",
-        ]),
-      ),
-    }))
+      );
+      return {
+        device: normDevice(
+          pick(r, ["device_segment", "device", "device_category", "devicecategory"]),
+        ),
+        visitorType: normVisitor(
+          pick(r, ["visitor_type", "visitortype", "visitor"]) || ALL,
+        ),
+        bookGroup: normBook(
+          pick(r, ["book_group", "bookgroup", "book", "product_line", "productline", "product"]) || ALL,
+        ),
+        sessions: sessions || pdpSessions,
+        pdpSessions,
+        loginStarted: num(
+          pick(r, [
+            "avg_monthly_login_started",
+            "avg_monthly_log_in_started",
+            "login_started",
+          ]),
+        ),
+        loginCompleted: num(
+          pick(r, [
+            "avg_monthly_login_completed",
+            "avg_monthly_log_in_completed",
+            "login_completed",
+          ]),
+        ),
+        projectStarted: num(
+          pick(r, ["avg_monthly_project_started", "project_started"]),
+        ),
+        imageAdded: num(
+          pick(r, ["avg_monthly_image_added", "image_added"]),
+        ),
+        addedToCart: num(
+          pick(r, [
+            "avg_monthly_product_added",
+            "product_added",
+            "added_to_cart",
+          ]),
+        ),
+        orders: num(
+          pick(r, [
+            "avg_monthly_order_completed",
+            "order_completed",
+            "orders",
+          ]),
+        ),
+      };
+    })
     .filter((r) => r.device && r.visitorType && r.bookGroup);
 }
 
