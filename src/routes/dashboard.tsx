@@ -380,18 +380,49 @@ function Dashboard() {
     (async () => {
       try {
         setDataLoading(true);
-        const storedSession =
+
+        // Try shared remote store first so uploads stick across users/devices.
+        let remoteSession: string | null = null;
+        let remoteAov: string | null = null;
+        try {
+          const { data, error } = await supabase
+            .from("shared_csv")
+            .select("key, content")
+            .in("key", ["session", "aov"]);
+          if (!error && data) {
+            for (const row of data as Array<{ key: string; content: string }>) {
+              if (row.key === "session") remoteSession = row.content;
+              if (row.key === "aov") remoteAov = row.content;
+            }
+          }
+        } catch {
+          // Network/offline — fall back to local cache.
+        }
+
+        const localSession =
           typeof window !== "undefined"
             ? localStorage.getItem("funnel.sessionCsv")
             : null;
-        const storedAov =
+        const localAov =
           typeof window !== "undefined"
             ? localStorage.getItem("funnel.aovCsv")
             : null;
-        const aovText = storedAov ?? aovCsvRaw;
-        const s = storedSession ? parseSessionCsv(storedSession) : [];
+
+        const sessionText = remoteSession ?? localSession;
+        const aovText = remoteAov ?? localAov ?? aovCsvRaw;
+
+        const s = sessionText ? parseSessionCsv(sessionText) : [];
         const a = parseAovCsv(aovText);
         if (cancelled) return;
+
+        // Refresh local cache so reloads are instant even before remote responds.
+        try {
+          if (typeof window !== "undefined") {
+            if (sessionText) localStorage.setItem("funnel.sessionCsv", sessionText);
+            if (remoteAov) localStorage.setItem("funnel.aovCsv", remoteAov);
+          }
+        } catch {}
+
         setSessionRows(s);
         setAovRows(a);
         setDataError(null);
